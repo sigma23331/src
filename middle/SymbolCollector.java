@@ -161,7 +161,7 @@ public class SymbolCollector {
 
     private void visitFuncDef(FuncDef funcDef) {
         Type returnType = (funcDef.getFuncType().getType() == TokenType.VOIDTK)
-                ? VoidType.getInstance() : IntegerType.getInstance();
+                ? VoidType.getInstance() : IntegerType.get(32);
         List<Type> paramTypes = new ArrayList<>();
         List<String> paramNames = new ArrayList<>();
         if (funcDef.getFuncFParams() != null) {
@@ -203,7 +203,7 @@ public class SymbolCollector {
     }
 
     private void visitMainFuncDef(MainFuncDef mainFuncDef) {
-        Type returnType = IntegerType.getInstance();
+        Type returnType = IntegerType.get(32);
         FunctionType funcType = new FunctionType(returnType, new ArrayList<>());
         FunctionSymbol funcSymbol = new FunctionSymbol(
                 "main", funcType, new ArrayList<>(), 0); // 应该不会被调用
@@ -273,10 +273,10 @@ public class SymbolCollector {
 
     private Type parseBType(BType bType) {
         if (bType.getToken().getType() == TokenType.INTTK) {
-            return IntegerType.getInstance();
+            return IntegerType.get(32);
         } else {
             // 假设 SysY 的 char 也可以用整数类型表示
-            return IntegerType.getInstance(); // 或者 CharType.getInstance()
+            return IntegerType.get(32); // 或者 CharType.getInstance()
         }
     }
 }

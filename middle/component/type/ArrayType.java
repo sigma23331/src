@@ -25,7 +25,7 @@ public class ArrayType implements Type {
     /**
      * 构造函数设为私有，强制使用 .get() 方法
      */
-    private ArrayType(Type elementType, int numElements) {
+    public ArrayType(Type elementType, int numElements) {
         this.elementType = elementType;
         this.numElements = numElements;
     }

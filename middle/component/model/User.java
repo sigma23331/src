@@ -36,42 +36,28 @@ public class User extends Value {
      */
     public void setOperand(int index, Value value) {
         Use use = this.operands.get(index);
-        if (use.)
-        // // 提示：
-        // // 1. 获取该索引对应的 Use 对象
-        // Use use = this.operands.get(index);
-        //
-        // // 2. (如果值没变，则无需操作)
-        // if (use.getValue() == value) {
-        //     return;
-        // }
-        //
-        // // 3. 告诉 Use 对象，它将不再使用旧值
-        // use.clearOldValueUse();
-        //
-        // // 4. 告诉 Use 对象，它将开始使用新值
-        // //    (use.setNewValue 会自动调用 newValue.addUse(use))
-        // use.setNewValue(value);
+        // 2. (如果值没变，则无需操作)
+        if (use.getValue() == value) {
+            return;
+        }
+        use.clearOldValueUse();
+        use.setNewValue(value);
     }
 
     /**
      * (内部方法) 由 Value.replaceAllUsesWith() 调用。
      */
     public void replaceOperandFromUse(Use use, Value newValue) {
-        // // 提示：
-        // // 1. 获取这个 Use 在本 User 中的索引
-        // int index = use.getOperandIndex();
-        //
-        // // 2. 调用 setOperand，它会处理所有 use-def 链的更新
-        // setOperand(index, newValue);
+        int index = use.getOperandIndex();
+        setOperand(index,newValue);
     }
 
     /**
      * 获取指定索引的操作数 Value。
      */
     public Value getOperand(int index) {
-        // // 提示：从 Use 对象中获取真正的 Value
-        // return this.operands.get(index).getValue();
+        // 提示：从 Use 对象中获取真正的 Value
+        return this.operands.get(index).getValue();
     }
 
     /**

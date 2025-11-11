@@ -19,7 +19,8 @@ public class AllocInst extends Instruction {
      * 构造函数。
      */
     public AllocInst(String name, Type allocatedType) {
-        super(PointerType.get(allocatedType),0);
+        super(PointerType.get(allocatedType));
+        // this.reserveOperands(0);
         this.allocatedType = allocatedType;
         this.setName(name);
     }

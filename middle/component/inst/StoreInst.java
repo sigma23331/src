@@ -13,7 +13,8 @@ public class StoreInst extends Instruction {
      * 构造函数。
      */
     public StoreInst(Value value, Value pointer) {
-        super(VoidType.getInstance(),2);
+        super(VoidType.getInstance());
+        this.reserveOperands(2);
         this.setOperand(0,value);
         this.setOperand(1,pointer);
     }

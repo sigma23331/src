@@ -24,7 +24,8 @@ public class CallInst extends Instruction {
      */
     public CallInst(String name, Function function, ArrayList<Value> args) {
         // 1. 指令的 Type 是函数的返回类型
-        super(function.getReturnType(), args.size() + 1);// N 个参数 + 1 个函数
+        super(function.getReturnType());// N 个参数 + 1 个函数
+        this.reserveOperands(args.size() + 1);
         // 2. (如果不是 void) 设置结果名
         if (!(function.getReturnType() instanceof VoidType)) {
             this.setName(name);

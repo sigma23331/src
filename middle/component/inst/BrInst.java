@@ -14,7 +14,8 @@ public class BrInst extends TerminatorInst {
      */
     public BrInst(BasicBlock dest) {
         // // 提示：
-        super(VoidType.getInstance(), 1); // 1 个操作数 (目标 BB)
+        super(VoidType.getInstance()); // 1 个操作数 (目标 BB)
+        this.reserveOperands(1);
         this.setOperand(0, dest);
     }
 
@@ -23,7 +24,8 @@ public class BrInst extends TerminatorInst {
      */
     public BrInst(Value cond, BasicBlock ifTrue, BasicBlock ifFalse) {
         // // 提示：
-        super(VoidType.getInstance(), 3); // 3 个操作数 (cond, true, false)
+        super(VoidType.getInstance()); // 3 个操作数 (cond, true, false)
+        this.reserveOperands(3);
         this.setOperand(0, cond);
         this.setOperand(1, ifTrue);
         this.setOperand(2, ifFalse);

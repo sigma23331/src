@@ -4,66 +4,91 @@ import middle.component.type.Type;
 import java.util.ArrayList;
 
 /**
- * “使用者”类 (新版本)，继承自 Value。
- * 代表一个“使用”其他 Value 的“值”。(例如, 指令)
+ * “使用者”类 (重构后)。
+ * * 关键区别：
+ * 1. 构造函数不再接收 numOperands。
+ * 2. 添加了 addOperand() 用于动态添加 (Phi, Call)。
+ * 3. 添加了 reserveOperands() + setOperand() 用于固定添加 (Binary, Store)。
  */
 public class User extends Value {
 
     /**
-     * 策略：操作数列表。
-     * 它存储的是 Use 对象，而不是像您源代码那样直接存 Value。
+     * 属性：操作数列表 (存储 Use 对象)。
+     * 现在是一个可动态增长的列表。
      */
     private final ArrayList<Use> operands;
 
     /**
-     * 构造函数：指定类型和操作数的*数量*。
+     * 构造函数 (不再需要 numOperands)。
      */
-    public User(Type type, int numOperands) {
+    public User(Type type) {
         super(type);
-        this.operands = new ArrayList<>(numOperands);
-        // 提示：用 null 占位，并创建 Use 对象
+        this.operands = new ArrayList<>();
+    }
+
+    /**
+     * (新) 辅助方法：为固定大小的指令预留插槽。
+     * (BinaryInst, StoreInst 等应首先调用此方法)
+     */
+    protected void reserveOperands(int numOperands) {
+        // 提示：
+        // 1. 确保列表容量
+        this.operands.ensureCapacity(numOperands);
+        
+        // 2. 用 null 占位，创建 Use 对象
         for (int i = 0; i < numOperands; i++) {
-            // 在创建时，操作数的值为 null
-            // Use 对象会自动在 null (如果非null)上注册
+            //(Use 构造函数会自动链接 null)
             Use use = new Use(this, null, i);
             this.operands.add(use);
         }
     }
 
     /**
-     * 核心区别：设置指定索引的操作数。
-     * (替换了您源代码中的 addOperand 和 modifyOperand)
+     * (新) 动态添加一个操作数。
+     * (PhiInst 和 CallInst 将使用此方法)
+     */
+    public void addOperand(Value value) {
+        // 提示：
+        // 1. 确定新索引
+        int index = this.operands.size();
+        
+        // 2. 创建新的 Use 对象（它会自动链接）
+        Use newUse = new Use(this, value, index);
+        
+        // 3. 添加到列表
+        this.operands.add(newUse);
+    }
+
+    /**
+     * (重构) 设置指定索引的操作数。
      */
     public void setOperand(int index, Value value) {
+        // 提示：
+        // 1. 获取该索引对应的 Use 对象
         Use use = this.operands.get(index);
+        
         // 2. (如果值没变，则无需操作)
         if (use.getValue() == value) {
             return;
         }
-        use.clearOldValueUse();
+        
+        // 3. 告诉 Use 对象，它将不再使用旧值
+        use.clearValueUse();
+        
+        // 4. 告诉 Use 对象，它将开始使用新值
         use.setNewValue(value);
     }
 
-    /**
-     * (内部方法) 由 Value.replaceAllUsesWith() 调用。
-     */
-    public void replaceOperandFromUse(Use use, Value newValue) {
-        int index = use.getOperandIndex();
-        setOperand(index,newValue);
-    }
-
-    /**
-     * 获取指定索引的操作数 Value。
-     */
     public Value getOperand(int index) {
-        // 提示：从 Use 对象中获取真正的 Value
         return this.operands.get(index).getValue();
     }
 
-    /**
-     * 获取操作数数量。
-     */
     public int getNumOperands() {
         return this.operands.size();
+    }
+
+    public void replaceOperandFromUse(Use use, Value newValue) {
+        int index = use.getIndex();
+        this.setOperand(index, newValue);
     }
 }

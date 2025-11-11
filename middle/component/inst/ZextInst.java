@@ -17,7 +17,8 @@ public class ZextInst extends Instruction {
      */
     public ZextInst(String name, Value valueToCast, Type targetType) {
         // 提示：
-        super(targetType, 1); // 1 个操作数
+        super(targetType); // 1 个操作数
+        this.reserveOperands(1);
         this.setName(name);
         this.setOperand(0, valueToCast);
     }

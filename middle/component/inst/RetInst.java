@@ -13,7 +13,8 @@ public class RetInst extends TerminatorInst {
      */
     public RetInst(Value value) {
         // 提示：
-        super(VoidType.getInstance(), 1); // 1 个操作数 (返回值)
+        super(VoidType.getInstance()); // 1 个操作数 (返回值)
+        this.reserveOperands(1);
         this.setOperand(0, value);
     }
 
@@ -22,7 +23,7 @@ public class RetInst extends TerminatorInst {
      */
     public RetInst() {
         // 提示：
-        super(VoidType.getInstance(), 0); // 0 个操作数
+        super(VoidType.getInstance()); // 0 个操作数
     }
 
     public boolean isVoidRet() {

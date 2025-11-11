@@ -13,7 +13,8 @@ public class LoadInst extends Instruction {
      * 构造函数。
      */
     public LoadInst(String name, Value pointer) { // pointer 必须是 PtrType
-        super(((PointerType) pointer.getType()).getPointeeType(),1);
+        super(((PointerType) pointer.getType()).getPointeeType());
+        this.reserveOperands(1);
         Type pointeeType = ((PointerType) pointer.getType()).getPointeeType();
         this.setName(name);
         this.setOperand(0,pointer);

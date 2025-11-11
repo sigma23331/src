@@ -19,9 +19,9 @@ public abstract class Instruction extends User {
     /**
      * 构造函数。
      */
-    public Instruction(Type type, int numOperands) {
+    public Instruction(Type type) {
         // 调用 User(Type type, int numOperands)
-        super(type, numOperands);
+        super(type);
         this.parent = null;
     }
 

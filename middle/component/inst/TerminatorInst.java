@@ -9,8 +9,8 @@ import middle.component.type.Type;
  */
 public abstract class TerminatorInst extends Instruction {
 
-    public TerminatorInst(Type type, int numOperands) {
-        super(type, numOperands);
+    public TerminatorInst(Type type) {
+        super(type);
     }
 
     @Override

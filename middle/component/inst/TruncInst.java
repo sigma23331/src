@@ -17,7 +17,8 @@ public class TruncInst extends Instruction {
      */
     public TruncInst(String name, Value valueToCast, Type targetType) {
         // // 提示：
-        super(targetType, 1); // 1 个操作数
+        super(targetType); // 1 个操作数
+        this.reserveOperands(1);
         this.setName(name);
         this.setOperand(0, valueToCast);
     }

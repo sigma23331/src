@@ -16,7 +16,8 @@ public class BinaryInst extends Instruction {
      * * 关键区别：使用 setOperand，而不是 addOperand。
      */
     public BinaryInst(BinaryOpCode opCode, Value op1, Value op2) {
-        super(opCode.isCompare() ? IntegerType.get1() : op1.getType(), 2);
+        super(opCode.isCompare() ? IntegerType.get1() : op1.getType());
+        this.reserveOperands(2);
         this.opCode = opCode;
         //设置操作数
         this.setOperand(0,op1);

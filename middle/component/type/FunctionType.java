@@ -1,13 +1,14 @@
 package middle.component.type;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class FunctionType implements Type {
     private final Type returnType;
-    private final List<Type> paramTypes;
+    private final ArrayList<Type> paramTypes;
 
-    public FunctionType(Type returnType, List<Type> paramTypes) {
+    public FunctionType(Type returnType, ArrayList<Type> paramTypes) {
         this.returnType = returnType;
         this.paramTypes = paramTypes;
     }
@@ -16,7 +17,7 @@ public class FunctionType implements Type {
         return returnType;
     }
 
-    public List<Type> getParamTypes() {
+    public ArrayList<Type> getParamTypes() {
         return paramTypes;
     }
 

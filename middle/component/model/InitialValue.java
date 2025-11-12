@@ -1,4 +1,4 @@
-package middle.component;
+package middle.component.model;
 
 import middle.component.type.Type;
 

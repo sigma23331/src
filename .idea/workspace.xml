@@ -89,7 +89,15 @@
       <option name="project" value="LOCAL" />
       <updated>1762843999820</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="IRBuilder_test_5">
+      <option name="closed" value="true" />
+      <created>1762853735778</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1762853735778</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -106,6 +114,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="IRBuilder_test_3" />
     <MESSAGE value="IRBuilder_test_4" />
-    <option name="LAST_COMMIT_MESSAGE" value="IRBuilder_test_4" />
+    <MESSAGE value="IRBuilder_test_5" />
+    <option name="LAST_COMMIT_MESSAGE" value="IRBuilder_test_5" />
   </component>
 </project>

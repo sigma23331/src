@@ -1,6 +1,6 @@
 package middle.symbol;
 
-import middle.component.InitialValue;
+import middle.component.model.InitialValue;
 import middle.component.type.Type;
 
 public class VarSymbol extends Symbol {

@@ -1,14 +1,12 @@
 package middle;
 
 import frontend.Token.TokenType;
-import frontend.syntax.*;
 import frontend.syntax.expression.*;
 import frontend.syntax.variable.ConstInitVal;
 import frontend.syntax.variable.InitVal;
-import middle.component.InitialValue;
+import middle.component.model.InitialValue;
 import middle.symbol.*;
 import error.ErrorHandler;
-import error.Error;
 import error.ErrorType;
 
 import java.util.ArrayList;

@@ -6,18 +6,13 @@ import frontend.syntax.BType;
 import frontend.syntax.Block;
 import frontend.syntax.BlockItem;
 import frontend.syntax.CompileUnit;
-import frontend.syntax.expression.AddExp;
-import frontend.syntax.expression.Exp;
-import frontend.syntax.expression.MulExp;
-import frontend.syntax.expression.UnaryExp;
 import frontend.syntax.function.FuncDef;
 import frontend.syntax.function.FuncFParam;
 import frontend.syntax.function.MainFuncDef;
 import frontend.syntax.statement.*;
 import frontend.syntax.variable.*;
-import frontend.syntax.expression.*;
 import middle.component.type.*;
-import middle.component.InitialValue;
+import middle.component.model.InitialValue;
 import middle.symbol.FunctionSymbol;
 import middle.symbol.VarSymbol;
 
@@ -162,8 +157,8 @@ public class SymbolCollector {
     private void visitFuncDef(FuncDef funcDef) {
         Type returnType = (funcDef.getFuncType().getType() == TokenType.VOIDTK)
                 ? VoidType.getInstance() : IntegerType.get(32);
-        List<Type> paramTypes = new ArrayList<>();
-        List<String> paramNames = new ArrayList<>();
+        ArrayList<Type> paramTypes = new ArrayList<>();
+        ArrayList<String> paramNames = new ArrayList<>();
         if (funcDef.getFuncFParams() != null) {
             for (FuncFParam param : funcDef.getFuncFParams().getParams()) {
                 Type baseType = parseBType(param.getBType());

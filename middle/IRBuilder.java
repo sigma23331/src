@@ -1,6 +1,8 @@
 package middle;
 
 // --- 导入您所有的 AST 节点 ---
+import frontend.Token.Token;
+import frontend.Token.TokenType;
 import frontend.syntax.*;
 import frontend.syntax.function.*;
 import frontend.syntax.statement.*;
@@ -370,22 +372,31 @@ public class IRBuilder {
     private void visitLocalConstDecl(ConstDecl constDecl) {
         for (ConstDef constDef : constDecl.getConstDefs()) {
             // 1. 解析符号
-            VarSymbol varSymbol = (VarSymbol) scopeManager.resolve(constDef.getIdent().getContent());
-            // 2. *关键*：在 *函数入口块* 创建 alloca
-            //    例如: "%a.addr.0 = alloca i32"
-            String name = nameManager.newVarName(varSymbol.getName() + ".addr");
-            AllocInst allocInst = new AllocInst(name, varSymbol.getType());
-            state.getCurrentFunction().getEntryBlock().addInstruction(allocInst);
+            VarSymbol symbol = (VarSymbol) scopeManager.resolve(constDef.getIdent().getContent());
+
+            // 2. 在 *函数入口块* 创建 alloca
+            String name = nameManager.newVarName(symbol.getName() + ".addr");
+            AllocInst alloc = new AllocInst(name, symbol.getType());
+            state.getCurrentFunction().getEntryBlock().addInstruction(alloc);
+
             // 3. 链接符号
-            varSymbol.setIrValue(allocInst); // "a" -> "%a.addr.0"
-            // 4. 创建初始值
-            InitialValue initVal = varSymbol.getInitialValue();
-            int constValue = initVal.getElements().get(0); // (假设非数组)
-            Constant irConstValue = ConstInt.get(IntegerType.get(32),constValue);
+            symbol.setIrValue(alloc); // "a" -> "%a.addr.0"
+
+            // 4. 创建初始值 (从 Pass 1 的 InitialValue 中获取)
+            //    (注意：我们调用 visitInitVal 来统一处理)
+            ArrayList<Value> initIRValues = visitInitVal(constDef.getConstInitVal(), symbol);
+
             // 5. 在 *当前块* 创建 store
-            //    例如: "store i32 10, i32* %a.addr.0"
-            StoreInst storeInst = new StoreInst(irConstValue,allocInst);
-            state.getCurrentBlock().addInstruction(storeInst);
+            if (symbol.getType() instanceof ArrayType) {
+                // --- 5a. 是数组: int a[2] = {1, 2}; ---
+                // 调用辅助函数循环 GEP + Store
+                storeArrayInit(alloc, initIRValues);
+            } else {
+                // --- 5b. 是标量: const int a = 10; ---
+                //    例如: "store i32 10, i32* %a.addr.0"
+                StoreInst store = new StoreInst(initIRValues.get(0), alloc);
+                state.getCurrentBlock().addInstruction(store);
+            }
         }
     }
 
@@ -395,61 +406,379 @@ public class IRBuilder {
      */
     private void visitLocalVarDecl(VarDecl varDecl) {
         for (VarDef varDef : varDecl.getVarDefs()) {
-             // 提示：
-             // 1. 解析符号 (Pass 1 已创建)
-             VarSymbol symbol = (VarSymbol) scopeManager.resolve(varDef.getIdent().getContent());
-            //     //
-             // 2. *关键*：在 *函数入口块* 创建 alloca
-             //    例如: "%b.addr.1 = alloca i32"
-             String name = nameManager.newVarName(symbol.getName() + ".addr");
-             AllocInst alloc = new AllocInst(name, symbol.getType());
-             state.getCurrentFunction().getEntryBlock().addInstruction(alloc);
-            //     //
-             // 3. 链接符号
-             symbol.setIrValue(alloc); // "b" -> "%b.addr.1"
-            //     //
-             // 4. 检查是否有初始值 (例如 int b = 10; 或 int b = c + 1;)
-             if (varDef.getInitVal() != null) {
-                 // 5. *递归*：访问表达式，生成计算初始值的 IR
-                 //    (visitInitVal/visitExp 将在下一步实现)
-                 Value initIRValue = visitInitVal(varDef.getInitVal());
-            //     //
-                 // 6. 在 *当前块* 创建 store
-                 //    例如: "store i32 %v5, i32* %b.addr.1"
-                 StoreInst store = new StoreInst(initIRValue, alloc);
-                 state.getCurrentBlock().addInstruction(store);
-             }
-             // (如果没有初始值，我们只创建 alloca，不 store)
+            // 1. 解析符号
+            VarSymbol symbol = (VarSymbol) scopeManager.resolve(varDef.getIdent().getContent());
+
+            // 2. 在 *函数入口块* 创建 alloca
+            String name = nameManager.newVarName(symbol.getName() + ".addr");
+            AllocInst alloc = new AllocInst(name, symbol.getType());
+            state.getCurrentFunction().getEntryBlock().addInstruction(alloc);
+
+            // 3. 链接符号
+            symbol.setIrValue(alloc); // "b" -> "%b.addr.1"
+
+            // 4. 检查是否有初始值
+            if (varDef.getInitVal() != null) {
+                // 5. *递归*：访问表达式，生成计算初始值的 IR
+                //    (visitInitVal 现在会返回一个列表)
+                ArrayList<Value> initIRValues = visitInitVal(varDef.getInitVal(), symbol);
+
+                // 6. 在 *当前块* 创建 store
+                if (symbol.getType() instanceof ArrayType) {
+                    // --- 6a. 是数组: int a[2] = {b, c+1}; ---
+                    storeArrayInit(alloc, initIRValues);
+                } else {
+                    // --- 6b. 是标量: int a = b + 1; ---
+                    //    例如: "store i32 %v5, i32* %b.addr.1"
+                    StoreInst store = new StoreInst(initIRValues.get(0), alloc);
+                    state.getCurrentBlock().addInstruction(store);
+                }
+            }
+            // (如果没有初始值，我们只创建 alloca，不 store)
         }
     }
 
     /**
-     * (新) 访问一个初始值 (InitVal)
-     * 对应原始代码的 buildInitVal
-     * (我们假设只处理非数组：int a = exp;)
+     * (新) 辅助方法：生成 GEP 和 Store 来初始化一个局部数组
+     * @param alloc 数组的 AllocInst (例如 [2 x i32]*)
+     * @param initIRValues 计算好的初始值列表 (例如 [%v1, %v2])
      */
-    private Value visitInitVal(InitVal initVal) {
-        // // 提示：
-        // // 1. 您的 InitVal (来自 Pass 1) 有 getSingleValue()
-        // // if (initVal.getSingleValue() != null) {
-        //  递归调用 visitExp 生成表达式 IR
-        // //     return visitExp(initVal.getSingleValue());
-        // // } else if (initVal.getArrayValues() != null) {
-        //  (处理数组初始化... 我们暂时跳过)
-        // //     return null;
-        // // }
-        return null; // (暂时占位)
+    private void storeArrayInit(AllocInst alloc, ArrayList<Value> initIRValues) {
+        // 1. 获取数组的元素类型 (例如 i32)
+        Type elemType = ((ArrayType) alloc.getAllocatedType()).getElementType();
+        // 2. 循环遍历 *所有* 初始值
+        for (int i = 0;i < initIRValues.size();i++) {
+            // 3. 获取第 i 个初始值 (例如 %v2)
+            Value elemValue = initIRValues.get(i);
+            // 4. 创建 GEP 指令
+            //    例如: "%ptr.2 = gep [2 x i32]*, %b.addr.1, i32 0, i32 0" (i=0)
+            //    (注意：GEP 需要两个索引：0 用于 "穿透" 指针, i 用于访问元素)
+            Value idx0 = ConstInt.get(IntegerType.get32(),0);
+            Value idxI = ConstInt.get(IntegerType.get32(),i);
+            String gepName = nameManager.newVarName();
+
+            GepInst gep = new GepInst(gepName, alloc, new ArrayList<>(java.util.List.of(idx0, idxI)));
+            state.getCurrentBlock().addInstruction(gep);
+            // 5. 创建 Store 指令
+            //    例如: "store i32 %v2, i32* %ptr.2"
+            StoreInst store = new StoreInst(elemValue,gep);
+            state.getCurrentBlock().addInstruction(store);
+        }
     }
 
     /**
-     * (新) 访问一个表达式 (Exp)
-     * 对应原始代码的 buildExp
+     * (修正) 访问一个初始值 (ConstInitVal 或 InitVal)
+     * (对应 原始代码 buildInitVal)
+     * *** 现已支持数组 ***
+     * @param initValNode AST 节点 (ConstInitVal 或 InitVal)
+     * @param symbol 对应的 VarSymbol (用于获取类型信息)
+     * @return 一个 IR Value 列表
+     */
+    private ArrayList<Value> visitInitVal(Object initValNode, VarSymbol symbol) {
+        // // 提示：
+        ArrayList<Value> irValues = new ArrayList<>();
+        Type type = symbol.getType();
+
+        if (initValNode instanceof ConstInitVal) {
+            // --- 情况 1：常量初始化 (const int a = ... / const int a[2] = ...) ---
+            // (我们 *不* 需要递归，因为 Pass 1 已经计算好了)
+            InitialValue constInit = symbol.getInitialValue(); // 来自 Pass 1
+
+            if (type instanceof ArrayType) {
+                // 数组: int a[2] = {1, 2};
+                IntegerType elemType = (IntegerType) ((ArrayType) type).getElementType();
+                for (int val : constInit.getElements()) {
+                    irValues.add(ConstInt.get(elemType, val));
+                }
+            } else {
+                // 标量: int a = 10;
+                irValues.add(ConstInt.get((IntegerType) type, constInit.getElements().get(0)));
+            }
+
+        } else if (initValNode instanceof InitVal) {
+            // --- 情况 2：变量初始化 (int a = ... / int a[2] = ...) ---
+            InitVal initVal = (InitVal) initValNode;
+
+            if (initVal.getSingleValue() != null) {
+                // 标量: int a = b + 5;
+                // *必须* 递归调用 visitExp
+                irValues.add(visitExp(initVal.getSingleValue()));
+
+            } else if (initVal.getArrayValues() != null) {
+                // 数组: int a[2] = {b, c + 1};
+                // *必须* 为每个元素递归调用 visitExp
+                for (Exp exp : initVal.getArrayValues()) {
+                    irValues.add(visitExp(exp));
+                }
+            }
+        }
+        return irValues;
+    }
+
+    /**
+     * (已实现) 访问一个表达式 (Exp)
+     * (对应 原始代码 buildExp)
      */
     private Value visitExp(Exp exp) {
-        // // 提示：
-        // // (我们将在下一步 6.6 中完整实现)
-        // // 暂时只实现顶层
-        // // return visitAddExp(exp.getAddExp());
-        return null; // (暂时占位)
+        // 表达式的根节点是 AddExp
+        return visitAddExp(exp.getAddExp());
+    }
+
+    /**
+     * (已实现) 访问 AddExp (+, -)
+     * (对应 原始代码 buildAddExp)
+     */
+    private Value visitAddExp(AddExp addExp) {
+        // 1. 访问第一个 MulExp
+        Value left = visitMulExp(addExp.getMulExps().get(0));
+
+        // 2. 循环处理
+        for (int i = 1; i < addExp.getMulExps().size(); i++) {
+            // 3. 获取操作符
+            TokenType op = addExp.getOperators().get(i - 1).getType();
+
+            // 4. 访问右侧的 MulExp
+            Value right = visitMulExp(addExp.getMulExps().get(i));
+
+            // 5. 确定 OpCode (ADD 或 SUB)
+            BinaryOpCode opCode = (op == TokenType.PLUS) ? BinaryOpCode.ADD : BinaryOpCode.SUB;
+
+            // 6. 创建 BinaryInst
+            //    例如: "%v1 = add i32 %v0, %temp"
+            String name = nameManager.newVarName();
+            BinaryInst inst = new BinaryInst(opCode, left, right);
+            inst.setName(name);
+            state.getCurrentBlock().addInstruction(inst);
+
+            // 7. 将此指令的结果作为下一次循环的 left
+            left = inst;
+        }
+
+        return left; // 返回最终的计算结果 (Value)
+    }
+
+    /**
+     * (已实现) 访问 MulExp (*, /, %)
+     * (对应 原始代码 buildMulExp)
+     */
+    private Value visitMulExp(MulExp mulExp) {
+        // 1. 访问第一个 UnaryExp
+        Value left = visitUnaryExp(mulExp.getUnaryExps().get(0));
+
+        // 2. 循环处理
+        for (int i = 1; i < mulExp.getUnaryExps().size(); i++) {
+            TokenType op = mulExp.getOperators().get(i - 1).getType();
+            Value right = visitUnaryExp(mulExp.getUnaryExps().get(i));
+
+            // 3. 确定 OpCode
+            BinaryOpCode opCode;
+            if (op == TokenType.MULT) {
+                opCode = BinaryOpCode.MUL;
+            } else if (op == TokenType.DIV) {
+                opCode = BinaryOpCode.SDIV;
+            } else { // (op == TokenType.MOD)
+                opCode = BinaryOpCode.SREM;
+            }
+
+            // 4. 创建 BinaryInst
+            //    例如: "%v2 = mul i32 %v1, 5"
+            String name = nameManager.newVarName();
+            BinaryInst inst = new BinaryInst(opCode, left, right);
+            inst.setName(name);
+            state.getCurrentBlock().addInstruction(inst);
+
+            // 5. 更新 left
+            left = inst;
+        }
+
+        return left;
+    }
+
+    /**
+     * (已实现) 访问 UnaryExp (-, !, +, func(), PrimaryExp)
+     * (对应 原始代码 buildUnaryExp)
+     */
+    private Value visitUnaryExp(UnaryExp unaryExp) {
+        if (unaryExp.getPrimaryExp() != null) {
+            // --- 情况 1：(Exp), LVal, Number ---
+            return visitPrimaryExp(unaryExp.getPrimaryExp());
+
+        } else if (unaryExp.getUnaryOp() != null) {
+            // --- 情况 2：+, -, ! ---
+            Value value = visitUnaryExp(unaryExp.getUnaryExp());
+            TokenType op = unaryExp.getUnaryOp().getOp().getType();
+
+            if (op == TokenType.PLUS) {
+                return value; // ( +a 等于 a )
+            }
+
+            // (创建 "0")
+            Constant zero = ConstInt.get(IntegerType.get32(), 0);
+            String name = nameManager.newVarName();
+
+            if (op == TokenType.MINU) {
+                // -a 编译为 "0 - a"
+                //    例如: "%v3 = sub i32 0, %v2"
+                BinaryInst inst = new BinaryInst(BinaryOpCode.SUB, zero, value);
+                inst.setName(name);
+                state.getCurrentBlock().addInstruction(inst);
+                return inst;
+            } else { // (op == TokenType.NOT)
+                // !a 编译为 "a == 0" (返回 i1)
+                //    例如: "%v4 = icmp eq i32 %v3, 0"
+                BinaryInst inst = new BinaryInst(BinaryOpCode.EQ, value, zero);
+                inst.setName(name);
+                state.getCurrentBlock().addInstruction(inst);
+
+                // *关键*：!a 返回 0 或 1 (i32)，但 icmp 返回 i1 (bool)
+                // 我们需要 zext (零扩展)
+                //    例如: "%v5 = zext i1 %v4 to i32"
+                String zextName = nameManager.newVarName();
+                ZextInst zext = new ZextInst(zextName, inst, IntegerType.get32());
+                state.getCurrentBlock().addInstruction(zext);
+                return zext;
+            }
+
+        } else if (unaryExp.getIdent() != null) {
+            // --- 情况 3：函数调用 (例如 getint() 或 myFunc(a, 10)) ---
+
+            // a. 解析函数符号
+            String funcName = unaryExp.getIdent().getContent();
+            FunctionSymbol funcSym = (FunctionSymbol) scopeManager.resolve(funcName);
+            Function funcToCall = (Function) funcSym.getIrValue(); // (来自 buildBuiltInFunctions)
+
+            // b. 递归访问所有 *参数* (RParams)
+            ArrayList<Value> args = new ArrayList<>();
+            if (unaryExp.getRParams() != null) {
+                for (Exp argExp : unaryExp.getRParams().getParams()) {
+                    args.add(visitExp(argExp));
+                }
+            }
+
+            // c. 创建 CallInst
+            String name = "";
+            // (如果函数不返回 void，我们需要一个名字来存储结果)
+            if (!(funcToCall.getReturnType() instanceof VoidType)) {
+                name = nameManager.newVarName();
+            }
+
+            // (为 getint() 创建特殊的子类)
+            if (funcName.equals("getint")) {
+                GetintInst call = new GetintInst(name, funcToCall);
+                state.getCurrentBlock().addInstruction(call);
+                return call;
+            }
+            // (putint, putstr 在 printf 中处理)
+            else {
+                // (普通函数调用)
+                CallInst call = new CallInst(name, funcToCall, args);
+                state.getCurrentBlock().addInstruction(call);
+                return call;
+            }
+        }
+        return null; // (不应到达)
+    }
+
+    /**
+     * (已实现) 访问 PrimaryExp ( (Exp), LVal, Number )
+     * (对应 原始代码 buildPrimaryExp)
+     */
+    private Value visitPrimaryExp(PrimaryExp primaryExp) {
+        if (primaryExp.getExp() != null) {
+            // --- 情况 1：(Exp) ---
+            return visitExp(primaryExp.getExp());
+
+        } else if (primaryExp.getNumber() != null) {
+            // --- 情况 2：Number ---
+            int val = Integer.parseInt(primaryExp.getNumber().getIntConst().getContent());
+            return ConstInt.get(IntegerType.get32(), val);
+
+        } else if (primaryExp.getLVal() != null) {
+            // --- 情况 3：LVal (变量使用) ---
+            // *关键*：当 LVal 出现在表达式中时，我们必须 *加载* (load) 它的值
+            return visitLValValue(primaryExp.getLVal());
+        }
+        return null; // (不应到达)
+    }
+
+    /**
+     * (已实现) 访问 LVal (作为 *值* 使用)
+     * * 关键*：生成 Load 指令
+     * (对应 原始代码 buildLValValue)
+     */
+    private Value visitLValValue(LVal lVal) {
+        // 1. 解析 LVal 符号
+        VarSymbol symbol = (VarSymbol) scopeManager.resolve(lVal.getIdent().getContent());
+
+        // 2. 获取该变量的 *地址* (指针)
+        //    (在 visitLocalDecl 中，我们用 setIrValue 将符号链接到了 AllocInst)
+        Value pointer = symbol.getIrValue(); // (例如 %a.addr.0)
+
+        if (symbol.getType() instanceof ArrayType) {
+            // --- 情况 2：数组访问 (例如 `a[i]`) ---
+
+            // a. 递归访问索引表达式
+            //    例如: (i) -> %v7
+            Value index = visitExp(lVal.getIndex());
+
+            // b. 创建 GEP 指令
+            //    例如: "%ptr.3 = gep [10 x i32]*, %arr.addr, i32 0, i32 %v7"
+            Value idx0 = ConstInt.get(IntegerType.get32(), 0);
+            String gepName = nameManager.newVarName();
+            GepInst gep = new GepInst(gepName, pointer, new ArrayList<>(java.util.List.of(idx0, index)));
+            state.getCurrentBlock().addInstruction(gep);
+
+            // c. 创建 Load 指令
+            //    例如: "%v8 = load i32, i32* %ptr.3"
+            String loadName = nameManager.newVarName();
+            LoadInst load = new LoadInst(loadName, gep);
+            state.getCurrentBlock().addInstruction(load);
+            return load;
+
+        } else {
+            // --- 情况 1：标量变量 (例如 `a`) ---
+
+            // a. 创建 Load 指令
+            //    例如: "%v6 = load i32, i32* %a.addr.0"
+            String name = nameManager.newVarName();
+            LoadInst load = new LoadInst(name, pointer);
+            state.getCurrentBlock().addInstruction(load);
+            return load;
+        }
+    }
+
+    /**
+     * (已实现) 访问 LVal (作为 *赋值* 目标)
+     * * 关键*：*不* 生成 Load，只返回地址
+     * (对应 原始代码 buildLValAssign)
+     */
+    private Value visitLValAssign(LVal lVal) {
+        // 1. 解析 LVal 符号
+        VarSymbol symbol = (VarSymbol) scopeManager.resolve(lVal.getIdent().getContent());
+
+        // 2. 获取该变量的 *基地址* (指针)
+        Value basePointer = symbol.getIrValue(); // (例如 %a.addr.0 或 %arr.addr)
+
+        if (symbol.getType() instanceof ArrayType) {
+            // --- 情况 2：数组 (例如 a[i] = ...) ---
+
+            // a. 递归访问索引表达式
+            Value index = visitExp(lVal.getIndex());
+
+            // b. 创建 GEP 指令
+            //    例如: "%ptr.4 = gep [10 x i32]*, %arr.addr, i32 0, i32 %v7"
+            Value idx0 = ConstInt.get(IntegerType.get32(), 0);
+            String gepName = nameManager.newVarName();
+            GepInst gep = new GepInst(gepName, basePointer, new ArrayList<>(java.util.List.of(idx0, index)));
+            state.getCurrentBlock().addInstruction(gep);
+
+            // c. 返回 GEP 的结果 (地址)
+            return gep; // (例如 %ptr.4)
+
+        } else {
+            // --- 情况 1：标量 (例如 a = ...) ---
+            //    直接返回 alloca 的地址
+            return basePointer; // (例如 %a.addr.0)
+        }
     }
 }

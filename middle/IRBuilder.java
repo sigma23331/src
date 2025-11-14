@@ -89,17 +89,6 @@ public class IRBuilder {
         return this.module;
     }
 
-    /**
-     * (已实现) 创建内置函数的“声明”
-     * 这一步从 ScopeManager 中 *解析* 符号，
-     * 创建 IR Function *声明*，并将两者链接起来。
-     */
-    /**
-     * (修正) 创建并注入内置函数的“声明”和“符号”。
-     *
-     * 这一步必须在 IRBuilder(Pass 3) 的开头执行，
-     * 因为 Pass 1 (SymbolCollector) 不会处理这些不存在于源码中的预定义函数。
-     */
     private void buildBuiltInFunctions() {
 
         // --- 1. 定义 "getint" ---
@@ -322,16 +311,32 @@ public class IRBuilder {
             String astParamName = funcDef.getFuncFParams().getParams().get(i).getIdent().getContent();
             VarSymbol localParamSymbol = (VarSymbol) scopeManager.resolve(astParamName);
             // b. 创建 AllocInst
-            //    例如: "%x.addr = alloca i32"
-            String allocName = nameManager.newVarName(astParamName + ".addr");
-            AllocInst allocInst = new AllocInst(allocName, irParam.getType());
-            entryBlock.addInstruction(allocInst);
-            // c. 创建 StoreInst
-            // 例如: "store i32 %arg0, i32* %x.addr"
-            StoreInst storeInst = new StoreInst(irParam,allocInst);
-            entryBlock.addInstruction(storeInst);
-            // d. *链接*：将局部符号 "x" 链接到 "%x.addr"
-            localParamSymbol.setIrValue(allocInst);
+            if (localParamSymbol.getType() instanceof ArrayType) {
+                // --- 情況 A：這是一個數組/指針參數 (int a[]) ---
+                // (設計決策：我們將符號 "a" *直接* 鏈接到 IR 參數 %v0)
+                // (這與您的原始 IRBuilder 邏輯一致)
+
+                // *我們不* 創建 AllocInst 或 StoreInst
+
+                // d. *鏈接*：將局部符號 "a" 鏈接到 IR 參數 "%v0"
+                localParamSymbol.setIrValue(irParam);
+
+            } else {
+                // --- 情況 B：這是一個標量參數 (int n) ---
+                // (您現有的 alloca-and-store 邏輯是正確的)
+
+                // b. 創建 AllocInst
+                String allocName = nameManager.newVarName(astParamName + ".addr");
+                AllocInst allocInst = new AllocInst(allocName, irParam.getType());
+                entryBlock.addInstruction(allocInst);
+
+                // c. 創建 StoreInst
+                StoreInst storeInst = new StoreInst(irParam, allocInst);
+                entryBlock.addInstruction(storeInst);
+
+                // d. *鏈接*：將局部符號 "n" 鏈接到 "%n.addr"
+                localParamSymbol.setIrValue(allocInst);
+            }
         }
         // 7. 递归访问函数体
         visitBlock(funcDef.getBlock());
@@ -805,24 +810,36 @@ public class IRBuilder {
         VarSymbol symbol = (VarSymbol) scopeManager.resolve(lVal.getIdent().getContent());
 
         // 2. 获取该变量的 *地址* (指针)
-        Value pointer = symbol.getIrValue(); // (例如 %a.addr.0 或 %arr.addr)
+        Value pointer = symbol.getIrValue(); // (例如 %a.addr.0 或 %v0)
 
         if (symbol.getType() instanceof ArrayType) {
 
+            // 4. *关键*：检查 IR 指针的实际类型 (它指向什么)
+            Type pointeeType = ((PointerType) pointer.getType()).getPointeeType();
+
             if (lVal.getIndex() != null) {
                 // --- 情况 2a：数组访问 (例如 `a[i]`) ---
-                // (返回一个 *值*，即 load 的结果)
 
                 // a. 递归访问索引表达式
                 Value index = visitExp(lVal.getIndex());
 
-                // b. 创建 GEP 指令
-                Value idx0 = ConstInt.get(IntegerType.get32(), 0);
+                // b. *修正*：构建索引列表
+                ArrayList<Value> indices = new ArrayList<>();
+                if (pointeeType instanceof ArrayType) {
+                    // (这是 %a.addr [10 x i32]*, 需要 2 个索引 [0, i])
+                    indices.add(ConstInt.get(IntegerType.get32(), 0));
+                    indices.add(index);
+                } else {
+                    // (这是 %v0 i32*, 只需要 1 个索引 [i])
+                    indices.add(index);
+                }
+
+                // c. 创建 GEP 指令
                 String gepName = nameManager.newVarName();
-                GepInst gep = new GepInst(gepName, pointer, new ArrayList<>(java.util.List.of(idx0, index)));
+                GepInst gep = new GepInst(gepName, pointer, indices);
                 state.getCurrentBlock().addInstruction(gep);
 
-                // c. 创建 Load 指令
+                // d. 创建 Load 指令
                 String loadName = nameManager.newVarName();
                 LoadInst load = new LoadInst(loadName, gep);
                 state.getCurrentBlock().addInstruction(load);
@@ -830,22 +847,23 @@ public class IRBuilder {
 
             } else {
                 // --- 情况 2b：数组名 (例如 `myFunc(a)`) ---
-                // (返回一个 *指针*，即 "数组退化")
 
-                // a. 创建 GEP 指令
-                //    (获取第 0 个元素的地址)
-                Value idx0 = ConstInt.get(IntegerType.get32(), 0);
-                String gepName = nameManager.newVarName();
-                GepInst gep = new GepInst(gepName, pointer, new ArrayList<>(java.util.List.of(idx0, idx0)));
-                state.getCurrentBlock().addInstruction(gep);
-
-                // b. *不* load，直接返回 GEP 的结果 (指针)
-                return gep; // (返回 i32*)
+                if (pointeeType instanceof ArrayType) {
+                    // (这是 %a.addr [10 x i32]*, 需要 GEP [0, 0] 来退化为 i32*)
+                    Value idx0 = ConstInt.get(IntegerType.get32(), 0);
+                    String gepName = nameManager.newVarName();
+                    GepInst gep = new GepInst(gepName, pointer, new ArrayList<>(java.util.List.of(idx0, idx0)));
+                    state.getCurrentBlock().addInstruction(gep);
+                    return gep; // (返回 i32*)
+                } else {
+                    // (这是 %v0 i32*, 它 *已经* 是退化后的指针了)
+                    // (什么都不用做，直接返回它)
+                    return pointer; // (返回 i32*)
+                }
             }
 
         } else {
             // --- 情况 1：标量变量 (例如 `a`) ---
-            // (总是 load)
             String name = nameManager.newVarName();
             LoadInst load = new LoadInst(name, pointer);
             state.getCurrentBlock().addInstruction(load);
@@ -863,22 +881,35 @@ public class IRBuilder {
         VarSymbol symbol = (VarSymbol) scopeManager.resolve(lVal.getIdent().getContent());
 
         // 2. 获取该变量的 *基地址* (指针)
-        Value basePointer = symbol.getIrValue(); // (例如 %a.addr.0 或 %arr.addr)
+        Value basePointer = symbol.getIrValue(); // (例如 %a.addr.0 或 %v0)
 
         if (symbol.getType() instanceof ArrayType) {
             // --- 情况 2：数组 (例如 a[i] = ...) ---
 
+            // 3. *关键*：检查 IR 指针的实际类型 (它指向什么)
+            Type pointeeType = ((PointerType) basePointer.getType()).getPointeeType();
+
             // a. 递归访问索引表达式
             Value index = visitExp(lVal.getIndex());
 
-            // b. 创建 GEP 指令
-            //    例如: "%ptr.4 = gep [10 x i32]*, %arr.addr, i32 0, i32 %v7"
-            Value idx0 = ConstInt.get(IntegerType.get32(), 0);
+            // b. *修正*：构建索引列表
+            ArrayList<Value> indices = new ArrayList<>();
+            if (pointeeType instanceof ArrayType) {
+                // (这是 %a.addr [10 x i32]*, 需要 2 个索引 [0, i])
+                indices.add(ConstInt.get(IntegerType.get32(), 0));
+                indices.add(index);
+            } else {
+                // (这是 %v0 i32*, 只需要 1 个索引 [i])
+                indices.add(index);
+            }
+
+            // c. 创建 GEP 指令
             String gepName = nameManager.newVarName();
-            GepInst gep = new GepInst(gepName, basePointer, new ArrayList<>(java.util.List.of(idx0, index)));
+            // (注意：你的 GepInst 构造函数需要能正确处理 basePointer 和 indices)
+            GepInst gep = new GepInst(gepName, basePointer, indices);
             state.getCurrentBlock().addInstruction(gep);
 
-            // c. 返回 GEP 的结果 (地址)
+            // d. 返回 GEP 的结果 (地址)
             return gep; // (例如 %ptr.4)
 
         } else {
@@ -1071,100 +1102,66 @@ public class IRBuilder {
     private void visitIfStmt(IfStmt stmt) {
         // 1. 获取当前函数
         Function func = state.getCurrentFunction();
-
-        // 2. 创建分支基本块
-        BasicBlock trueBlock = new BasicBlock(nameManager.newBlockName("if.then"), func);
-        BasicBlock falseBlock;
-
-        // --- *** 关键修改 1：将 followBlock 初始化为 null *** ---
-        // 我们只在 *需要* 它的时候才创建它
-        BasicBlock followBlock = null;
-
         boolean hasElse = (stmt.getElseStmt() != null);
 
+        // 2. *立即* 创建所有需要的块。这更简单。
+        BasicBlock trueBlock = new BasicBlock(nameManager.newBlockName("if.then"), func);
+        BasicBlock falseBlock = null; // 只有在 hasElse 时才创建
+        BasicBlock followBlock = new BasicBlock(nameManager.newBlockName("if.follow"), func);
+
+        // 3. 决定 false 分支的目标
+        BasicBlock falseTarget;
         if (hasElse) {
-            // a. (有 else) 创建 else 块。follow 块 *可能* 稍后创建。
             falseBlock = new BasicBlock(nameManager.newBlockName("if.else"), func);
+            falseTarget = falseBlock; // (有 else, 跳转到 else 块)
         } else {
-            // b. (无 else)
-            //    我们 *知道* false 分支需要一个跳转目标。
-            //    *现在* 创建 follow 块 (惰性创建 - 情况1)
-            followBlock = new BasicBlock(nameManager.newBlockName("if.follow"), func);
-            falseBlock = followBlock; // false 分支就是 follow 块
+            falseTarget = followBlock; // (无 else, 直接跳转到 follow 块)
         }
 
-        // 3. 生成条件跳转
-        visitCond(stmt.getCond(), trueBlock, falseBlock);
+        // 4. 生成条件跳转
+        visitCond(stmt.getCond(), trueBlock, falseTarget);
 
-        // 4. 填充 True 块
-        state.setCurrentBlock(trueBlock); // *设置* 当前块
-        visitStmt(stmt.getIfStmt());      // *递归* (这会改变 state.currentBlock)
+        // 5. 填充 True 块
+        state.setCurrentBlock(trueBlock);
+        visitStmt(stmt.getIfStmt());
 
-        // --- *** 关键修改 2：只检查终止符，不立即添加 br *** ---
-        // (我们使用 trueBlock，而不是 state.getCurrentBlock()，以防嵌套)
-        boolean trueTerminated = (trueBlock.getTerminator() != null);
-        // (保存 true 分支的 *实际* 结束块，它可能是嵌套 if 的 follow 块)
+        // 6. *修正*：获取 true 分支 *结束* 时的块
         BasicBlock trueEndBlock = state.getCurrentBlock();
+        // 7. 如果 true 分支没有被 "ret" 终结，就添加 "br"
+        if (trueEndBlock.getTerminator() == null) {
+            trueEndBlock.addInstruction(new BrInst(followBlock));
+        }
 
-        // 5. 填充 False 块 (如果存在)
-        boolean falseTerminated = false; // (如果 !hasElse，false 块就是 follow 块，而 follow 块尚未填充，所以它没有终止)
+        // 8. 填充 False 块
         BasicBlock falseEndBlock = null;
         if (hasElse) {
-            state.setCurrentBlock(falseBlock); // *设置* 当前块
-            visitStmt(stmt.getElseStmt());     // *递归*
+            state.setCurrentBlock(falseBlock);
+            visitStmt(stmt.getElseStmt());
 
-            // (我们使用 falseBlock，而不是 state.getCurrentBlock())
-            falseTerminated = (falseBlock.getTerminator() != null);
+            // 9. *修正*：获取 false 分支 *结束* 时的块
             falseEndBlock = state.getCurrentBlock();
+            // 10. 如果 false 分支没有被 "ret" 终结，就添加 "br"
+            if (falseEndBlock.getTerminator() == null) {
+                falseEndBlock.addInstruction(new BrInst(followBlock));
+            }
         }
 
-        // 6. *** 关键修改 3：决策 ***
-        //    我们是否需要 followBlock？
-        //    (如果 !hasElse 时，false 分支 *总是* 通向 follow，所以 falseTerminated 永远是 false)
-        if (!hasElse) {
-            falseTerminated = false;
-        }
+        // 11. 决定 follow 块是否可达
+        boolean trueTerminated = (trueEndBlock.getTerminator() != null);
+        boolean falseTerminated = (hasElse) ? (falseEndBlock.getTerminator() != null) : false; // (无 else 就算未终结)
 
-        boolean needFollowBlock = !trueTerminated || !falseTerminated;
-
-        if (needFollowBlock) {
-
-            if (followBlock == null) {
-                // (这种情况发生在 "if-else" 结构中，且至少一个分支没 ret)
-                // *** 现在才创建 followBlock (惰性创建 - 情况2) ***
-                followBlock = new BasicBlock(nameManager.newBlockName("if.follow"), func);
-            }
-
-            // 7. 为 *未* 终结的块添加 br
-            if (!trueTerminated) {
-                // (true 块 *本身* 未终结，必须跳转到 follow)
-                // (这只会在 trueBlock 包含 *非* 终结指令时发生)
-                // (在您的 f4 示例中, trueBlock 被 ret 终结, trueTerminated = true, 此处跳过)
-                BrInst br = new BrInst(followBlock);
-                trueBlock.addInstruction(br);
-            } else if (trueEndBlock.getTerminator() == null) {
-                // *** 针对 f4 示例的修正 ***
-                // (trueBlock 本身 *被* 终结了 (例如被一个嵌套的 br))
-                // (但是它 *结束* 的块 (trueEndBlock) 没有终结)
-                // (例如 "if.follow4" 是空的)
-                // (我们必须终结 *那个* 块，让它跳转到 *外层* 的 follow)
-                BrInst br = new BrInst(followBlock);
-                trueEndBlock.addInstruction(br);
-            }
-
-            if (hasElse && !falseTerminated) {
-                // (else 块存在且未终结，必须跳转到 follow)
-                BrInst br = new BrInst(followBlock);
-                falseBlock.addInstruction(br);
-            } else if (hasElse && falseEndBlock.getTerminator() == null) {
-                // (处理 else 块的嵌套)
-                BrInst br = new BrInst(followBlock);
-                falseEndBlock.addInstruction(br);
-            }
-
-            // 8. 将当前块设置为 follow 块
+        if (trueTerminated && (hasElse && falseTerminated)) {
+            // A. (情况 A: if {ret} else {ret})
+            // follow 块是不可达的 "死代码"。
+            // 我们可以删除它（可选），但 *不能* 将它设为当前块。
+            // （为安全起见，我们暂时不删除它，但也不设置它）
+            // (注意：这可能导致后续代码生成在错误的块中，
+            //  一个更安全的做法是 *总是* 设置 followBlock 为当前块)
             state.setCurrentBlock(followBlock);
-
+        } else {
+            // B. (情况 B: 至少一个分支会到达 follow)
+            // 这是正常情况，将 follow 块设为当前块
+            state.setCurrentBlock(followBlock);
         }
     }
 

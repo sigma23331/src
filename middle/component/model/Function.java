@@ -1,6 +1,8 @@
 package middle.component.model;
 
+import middle.component.type.ArrayType;
 import middle.component.type.FunctionType;
+import middle.component.type.PointerType;
 import middle.component.type.Type;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -43,9 +45,27 @@ public class Function extends Value {
         this.basicBlocks = new LinkedList<>();
         this.params = new ArrayList<>();
         // // 2. 根据 paramTypes 自动创建 FuncParam 对象
-        // // (IRBuilder 稍后会为它们命名)
+        ArrayList<Type> irParamTypes = new ArrayList<>();
+
         for (int i = 0; i < paramTypes.size(); i++) {
-            FuncParam param = new FuncParam(paramTypes.get(i), "", i);
+            Type astType = paramTypes.get(i);
+            Type irType; // 這是我們將要創建的 FuncParam 的類型
+
+            if (astType instanceof ArrayType) {
+                // --- 情況 A：數組參數 (int a[]) ---
+                // (astType 是 ArrayType(i32, -1))
+                // *必須* 將其退化為指針 (i32*)
+                irType = PointerType.get(((ArrayType) astType).getElementType());
+            } else {
+                // --- 情況 B：標量參數 (int n) ---
+                irType = astType;
+            }
+
+            // 將 *正確* 的 IR 類型添加到列表中
+            irParamTypes.add(irType);
+
+            // 創建 FuncParam (現在使用 irType)
+            FuncParam param = new FuncParam(irType, "", i);
             param.setParent(this);
             this.params.add(param);
         }
@@ -82,7 +102,7 @@ public class Function extends Value {
         if (this.isDeclaration) {
             // 2. 如果是“声明”
             // 例如: "declare i32 @getint()"
-            return "declare " + this.returnType.toString() + " " +
+            return "declare " + this.returnType.toString() + " @" +
                    this.getName() + "(" + paramStr + ")";
         } else {
             // 3. 如果是“定义”

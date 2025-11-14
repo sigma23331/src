@@ -4,10 +4,8 @@ import frontend.Lexer;
 import frontend.Parser;
 import frontend.Token.Token;
 import frontend.syntax.CompileUnit; // 引入 CompUnit
-import middle.ScopeManager;
-import middle.SemanticValidator;
-import middle.SymbolCollector;
-import middle.SymbolLogger;
+import middle.*;
+import middle.component.model.Module;
 import middle.symbol.SymbolRecord;
 
 import java.io.BufferedWriter;
@@ -27,6 +25,7 @@ public class Compiler {
         String inputFile = "testfile.txt";
         String symbolOutputFile = "symbol.txt"; // 用于成功时的符号表输出
         String errorOutputFile = "error.txt";   // 用于错误时的输出
+        String irOutputFile = "llvm_ir.txt";
 
         try {
             // 1. 读取 testfile.txt 中的全部内容
@@ -58,18 +57,45 @@ public class Compiler {
 
             // --- 【语义分析结束】 ---
 
-            // 5. --- 检查最终结果并输出 ---
+            // 5. --- 【修改】检查最终结果并输出 ---
             if (errorHandler.hasErrors()) {
                 // 如果在任何阶段发现了错误，则输出错误并终止
                 printErrors(errorHandler.getSortedErrors(), errorOutputFile);
             } else {
-                // 如果一路通关，没有任何错误，则输出符号表
+                // --- 成功！ ---
+
+                // 1. (原逻辑) 输出符号表
                 printSymbols(SymbolLogger.getInstance().getRecords(), symbolOutputFile);
+
+                // --- 【新增：第 3 遍：IR 生成】 ---
+                // 2. 创建 IRBuilder (Pass 3)
+                //    (我们重用了 Pass 1 填充好的 ScopeManager)
+                IRBuilder irBuilder = new IRBuilder(scopeManager);
+
+                // 3. *关键*：执行 IR 生成，获取 IR Module
+                Module irModule = irBuilder.build(astRoot);
+
+                // 4. 将生成的 IR Module 写入文件
+                printIR(irModule, irOutputFile);
             }
 
         } catch (IOException e) {
             System.err.println("Error reading or writing files: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * 【新增方法】将 IR Module 写入 llvm_ir.txt
+     */
+    private static void printIR(Module module, String filePath) throws IOException {
+        // // 提示：
+        // // 1. 调用我们 Module 类的 toString() 方法
+        String irCode = module.toString();
+        //
+        // // 2. 将字符串写入文件
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            writer.write(irCode);
         }
     }
 

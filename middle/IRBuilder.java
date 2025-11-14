@@ -94,27 +94,88 @@ public class IRBuilder {
      * 这一步从 ScopeManager 中 *解析* 符号，
      * 创建 IR Function *声明*，并将两者链接起来。
      */
+    /**
+     * (修正) 创建并注入内置函数的“声明”和“符号”。
+     *
+     * 这一步必须在 IRBuilder(Pass 3) 的开头执行，
+     * 因为 Pass 1 (SymbolCollector) 不会处理这些不存在于源码中的预定义函数。
+     */
     private void buildBuiltInFunctions() {
-        // // 提示：
-        // // 1. 从 ScopeManager 中 *解析* Pass 1 定义的符号
-        // //    (我们假设 Pass 1 定义了 "getint", "putint", "putstr")
-        FunctionSymbol getintSym = (FunctionSymbol) scopeManager.resolve("getint");
-        FunctionSymbol putintSym = (FunctionSymbol) scopeManager.resolve("putint");
-        FunctionSymbol putstrSym = (FunctionSymbol) scopeManager.resolve("putstr");
-        //
-        // // 2. 为它们创建我们的 IR Function *声明* 对象
-        Function getintFunc = new Function(getintSym.getName(),getintSym.getType().getReturnType(),getintSym.getType().getParamTypes(),true);
-        Function putintFunc = new Function(putintSym.getName(),putintSym.getType().getReturnType(),putintSym.getType().getParamTypes(),true);
-        Function putstrFunc = new Function(putstrSym.getName(),putstrSym.getType().getReturnType(),putstrSym.getType().getParamTypes(),true);
-        // // 3. 将它们添加到 Module 中 (Module 现在管理“声明”)
-        module.addDeclaration(getintFunc);
-        module.addDeclaration(putintFunc);
-        module.addDeclaration(putstrFunc);
-        //
-        // // 4. *关键*：将 IR 对象 (Function) 链接回符号 (Symbol)
-        getintSym.setIrValue(getintFunc);
+
+        // --- 1. 定义 "getint" ---
+        // a. 创建 "getint" 的类型： i32 ()
+        Type getintRetType = IntegerType.get32();
+        ArrayList<Type> getintParams = new ArrayList<>();
+        // *** 修正：使用您提供的 public 构造函数 ***
+        FunctionType getintType = new FunctionType(getintRetType, getintParams);
+
+        // b. 创建 "getint" 的 IR Function 声明
+        //    (我们假设 Function 构造函数 (您已实现) 接收这些参数)
+        Function getintFunc = new Function(
+                "getint",
+                getintRetType,
+                getintParams,
+                true // isDeclaration = true
+        );
+
+        // c. 创建 "getint" 的 FunctionSymbol
+        //    (这匹配您提供的 FunctionSymbol 构造函数)
+        FunctionSymbol getintSym = new FunctionSymbol("getint", getintType, new ArrayList<>(), 0); // (line 0)
+
+        // d. 链接并注册
+        getintSym.setIrValue(getintFunc);         // 链接 Symbol -> IR Value
+        module.addDeclaration(getintFunc);        // 添加到 Module
+        scopeManager.define(getintSym, 0);        // *关键*：注入到全局作用域
+
+
+        // --- 2. 定义 "putint" ---
+        // a. 创建 "putint" 的类型： void (i32)
+        Type putintRetType = VoidType.getInstance();
+        ArrayList<Type> putintParams = new ArrayList<>();
+        putintParams.add(IntegerType.get32());
+        // *** 修正：使用您提供的 public 构造函数 ***
+        FunctionType putintType = new FunctionType(putintRetType, putintParams);
+
+        // b. 创建 "putint" 的 IR Function 声明
+        Function putintFunc = new Function(
+                "putint",
+                putintRetType,
+                putintParams,
+                true // isDeclaration = true
+        );
+
+        // c. 创建 "putint" 的 FunctionSymbol
+        FunctionSymbol putintSym = new FunctionSymbol("putint", putintType, new ArrayList<>(), 0);
+
+        // d. 链接并注册
         putintSym.setIrValue(putintFunc);
+        module.addDeclaration(putintFunc);
+        scopeManager.define(putintSym, 0);
+
+
+        // --- 3. 定义 "putstr" ---
+        // a. 创建 "putstr" 的类型： void (i8*)
+        Type putstrRetType = VoidType.getInstance();
+        ArrayList<Type> putstrParams = new ArrayList<>();
+        putstrParams.add(PointerType.get(IntegerType.get8())); // i8*
+        // *** 修正：使用您提供的 public 构造函数 ***
+        FunctionType putstrType = new FunctionType(putstrRetType, putstrParams);
+
+        // b. 创建 "putstr" 的 IR Function 声明
+        Function putstrFunc = new Function(
+                "putstr",
+                putstrRetType,
+                putstrParams,
+                true // isDeclaration = true
+        );
+
+        // c. 创建 "putstr" 的 FunctionSymbol
+        FunctionSymbol putstrSym = new FunctionSymbol("putstr", putstrType, new ArrayList<>(), 0);
+
+        // d. 链接并注册
         putstrSym.setIrValue(putstrFunc);
+        module.addDeclaration(putstrFunc);
+        scopeManager.define(putstrSym, 0);
     }
 
     /**
@@ -231,7 +292,7 @@ public class IRBuilder {
         // 1. 解析函数符号
         FunctionSymbol functionSymbol = (FunctionSymbol) scopeManager.resolve(funcDef.getIdent().getContent());
         // 2. 创建 IR Function *定义*
-        Function irFunction = new Function("@" + functionSymbol.getName(),functionSymbol.getType().getReturnType(),
+        Function irFunction = new Function(functionSymbol.getName(),functionSymbol.getType().getReturnType(),
                 functionSymbol.getType().getParamTypes(),false);
         // 3. 添加到 Module 并链接
         module.addFunction(irFunction);
@@ -250,6 +311,11 @@ public class IRBuilder {
         // 6. *关键*：为所有参数创建 alloca 和 store
         //    (将 %arg0 存入 %x.addr)
         ArrayList<FuncParam> irParams = irFunction.getParams(); // IR 参数 (例如 %arg0)
+        for (FuncParam irParam : irParams) {
+            // (从 nameManager 获取 %v0, %v1 ...)
+            String paramName = nameManager.newVarName();
+            irParam.setName(paramName);
+        }
         for (int i = 0;i < irParams.size();i++) {
             FuncParam irParam = irParams.get(i);
             // a. 获取此参数在 Pass 1 中的 *局部变量符号*
@@ -268,7 +334,7 @@ public class IRBuilder {
             localParamSymbol.setIrValue(allocInst);
         }
         // 7. 递归访问函数体
-        // visitBlock(funcDef.getBlock());
+        visitBlock(funcDef.getBlock());
         // 8. *关键*：确保函数有 ret 指令
         BasicBlock lastBlock = state.getCurrentBlock();
         if (lastBlock.getTerminator() == null) {
@@ -295,7 +361,7 @@ public class IRBuilder {
         // 1. 解析 "main" 符号
         FunctionSymbol functionSymbol = (FunctionSymbol) scopeManager.resolve("main");
         // 2. 创建 IR Function *定义*
-        Function irFunction = new Function("@" + functionSymbol.getName(),functionSymbol.getType().getReturnType(),
+        Function irFunction = new Function(functionSymbol.getName(),functionSymbol.getType().getReturnType(),
                 functionSymbol.getType().getParamTypes(),false);
         // 3. 添加到 Module 并链接
         module.addFunction(irFunction);
@@ -313,7 +379,7 @@ public class IRBuilder {
         state.setCurrentBlock(entryBlock);
         // 6. (无参数，跳过 Alloc/Store)
         // 7. 递归访问函数体
-        // visitBlock(mainFuncDef.getBlock());
+        visitBlock(mainFuncDef.getBlock());
         // 8. 确保有 "ret i32 0"
         BasicBlock lastBlock = state.getCurrentBlock();
         if (lastBlock.getTerminator() == null) {
@@ -342,12 +408,18 @@ public class IRBuilder {
      * 对应原始代码的 buildBlockItem
      */
     private void visitBlockItem(BlockItem item) {
+        if (state.getCurrentBlock().getTerminator() != null) {
+            // 該塊已死。
+            // 之後的所有語句 (例如 `return x;`) 都是不可達代碼。
+            // 我們忽略它們，什麼也不做。
+            return; // (!!!)
+        }
         // 1. 分派到局部声明或语句
         if (item instanceof Decl) {
             visitLocalDecl((Decl) item);
         } else if (item instanceof Stmt) {
             // (我们将在下一步实现 visitStmt)
-            // visitStmt((Stmt) item);
+            visitStmt((Stmt) item);
         }
     }
 
@@ -409,32 +481,54 @@ public class IRBuilder {
             // 1. 解析符号
             VarSymbol symbol = (VarSymbol) scopeManager.resolve(varDef.getIdent().getContent());
 
-            // 2. 在 *函数入口块* 创建 alloca
-            String name = nameManager.newVarName(symbol.getName() + ".addr");
-            AllocInst alloc = new AllocInst(name, symbol.getType());
-            state.getCurrentFunction().getEntryBlock().addInstruction(alloc);
+            if (symbol.isStatic()) {
+                // --- 情況 1：是 static 局部變量 ---
+                // (我們必須像處理 *全局* 變量一樣處理它)
 
-            // 3. 链接符号
-            symbol.setIrValue(alloc); // "b" -> "%b.addr.1"
+                // a. 創建 GlobalVar
+                PointerType varPtrType = PointerType.get(symbol.getType());
 
-            // 4. 检查是否有初始值
-            if (varDef.getInitVal() != null) {
-                // 5. *递归*：访问表达式，生成计算初始值的 IR
-                //    (visitInitVal 现在会返回一个列表)
-                ArrayList<Value> initIRValues = visitInitVal(varDef.getInitVal(), symbol);
+                // (給它一個唯一的內部名字，例如 @testNormalExpr.temp_Two)
+                String varName = "@" + state.getCurrentFunction().getName() + "." + symbol.getName();
 
-                // 6. 在 *当前块* 创建 store
-                if (symbol.getType() instanceof ArrayType) {
-                    // --- 6a. 是数组: int a[2] = {b, c+1}; ---
-                    storeArrayInit(alloc, initIRValues);
-                } else {
-                    // --- 6b. 是标量: int a = b + 1; ---
-                    //    例如: "store i32 %v5, i32* %b.addr.1"
-                    StoreInst store = new StoreInst(initIRValues.get(0), alloc);
-                    state.getCurrentBlock().addInstruction(store);
+                // b. 獲取初始值 (如果未初始化，createGlobalInitializer 會返回 0)
+                Constant initializer = createGlobalInitializer(symbol);
+
+                // c. 創建 GlobalVar (非 const)
+                GlobalVar gv = new GlobalVar(varName, varPtrType, initializer, false);
+
+                // d. 添加到 Module 並鏈接
+                module.addGlobalVar(gv);
+                symbol.setIrValue(gv); // 符號 "temp_Two" -> "@testNormalExpr.temp_Two"
+
+            }
+            else {
+                // 2. 在 *函数入口块* 创建 alloca
+                String name = nameManager.newVarName(symbol.getName() + ".addr");
+                AllocInst alloc = new AllocInst(name, symbol.getType());
+                state.getCurrentFunction().getEntryBlock().addInstruction(alloc);
+
+                // 3. 链接符号
+                symbol.setIrValue(alloc); // "b" -> "%b.addr.1"
+
+                // 4. 检查是否有初始值
+                if (varDef.getInitVal() != null) {
+                    // 5. *递归*：访问表达式，生成计算初始值的 IR
+                    //    (visitInitVal 现在会返回一个列表)
+                    ArrayList<Value> initIRValues = visitInitVal(varDef.getInitVal(), symbol);
+
+                    // 6. 在 *当前块* 创建 store
+                    if (symbol.getType() instanceof ArrayType) {
+                        // --- 6a. 是数组: int a[2] = {b, c+1}; ---
+                        storeArrayInit(alloc, initIRValues);
+                    } else {
+                        // --- 6b. 是标量: int a = b + 1; ---
+                        //    例如: "store i32 %v5, i32* %b.addr.1"
+                        StoreInst store = new StoreInst(initIRValues.get(0), alloc);
+                        state.getCurrentBlock().addInstruction(store);
+                    }
                 }
             }
-            // (如果没有初始值，我们只创建 alloca，不 store)
         }
     }
 
@@ -704,46 +798,58 @@ public class IRBuilder {
     /**
      * (已实现) 访问 LVal (作为 *值* 使用)
      * * 关键*：生成 Load 指令
-     * (对应 原始代码 buildLValValue)
+     * *** 最终修正版：正确处理数组指针退化 ***
      */
     private Value visitLValValue(LVal lVal) {
         // 1. 解析 LVal 符号
         VarSymbol symbol = (VarSymbol) scopeManager.resolve(lVal.getIdent().getContent());
 
         // 2. 获取该变量的 *地址* (指针)
-        //    (在 visitLocalDecl 中，我们用 setIrValue 将符号链接到了 AllocInst)
-        Value pointer = symbol.getIrValue(); // (例如 %a.addr.0)
+        Value pointer = symbol.getIrValue(); // (例如 %a.addr.0 或 %arr.addr)
 
         if (symbol.getType() instanceof ArrayType) {
-            // --- 情况 2：数组访问 (例如 `a[i]`) ---
 
-            // a. 递归访问索引表达式
-            //    例如: (i) -> %v7
-            Value index = visitExp(lVal.getIndex());
+            if (lVal.getIndex() != null) {
+                // --- 情况 2a：数组访问 (例如 `a[i]`) ---
+                // (返回一个 *值*，即 load 的结果)
 
-            // b. 创建 GEP 指令
-            //    例如: "%ptr.3 = gep [10 x i32]*, %arr.addr, i32 0, i32 %v7"
-            Value idx0 = ConstInt.get(IntegerType.get32(), 0);
-            String gepName = nameManager.newVarName();
-            GepInst gep = new GepInst(gepName, pointer, new ArrayList<>(java.util.List.of(idx0, index)));
-            state.getCurrentBlock().addInstruction(gep);
+                // a. 递归访问索引表达式
+                Value index = visitExp(lVal.getIndex());
 
-            // c. 创建 Load 指令
-            //    例如: "%v8 = load i32, i32* %ptr.3"
-            String loadName = nameManager.newVarName();
-            LoadInst load = new LoadInst(loadName, gep);
-            state.getCurrentBlock().addInstruction(load);
-            return load;
+                // b. 创建 GEP 指令
+                Value idx0 = ConstInt.get(IntegerType.get32(), 0);
+                String gepName = nameManager.newVarName();
+                GepInst gep = new GepInst(gepName, pointer, new ArrayList<>(java.util.List.of(idx0, index)));
+                state.getCurrentBlock().addInstruction(gep);
+
+                // c. 创建 Load 指令
+                String loadName = nameManager.newVarName();
+                LoadInst load = new LoadInst(loadName, gep);
+                state.getCurrentBlock().addInstruction(load);
+                return load; // (返回 i32)
+
+            } else {
+                // --- 情况 2b：数组名 (例如 `myFunc(a)`) ---
+                // (返回一个 *指针*，即 "数组退化")
+
+                // a. 创建 GEP 指令
+                //    (获取第 0 个元素的地址)
+                Value idx0 = ConstInt.get(IntegerType.get32(), 0);
+                String gepName = nameManager.newVarName();
+                GepInst gep = new GepInst(gepName, pointer, new ArrayList<>(java.util.List.of(idx0, idx0)));
+                state.getCurrentBlock().addInstruction(gep);
+
+                // b. *不* load，直接返回 GEP 的结果 (指针)
+                return gep; // (返回 i32*)
+            }
 
         } else {
             // --- 情况 1：标量变量 (例如 `a`) ---
-
-            // a. 创建 Load 指令
-            //    例如: "%v6 = load i32, i32* %a.addr.0"
+            // (总是 load)
             String name = nameManager.newVarName();
             LoadInst load = new LoadInst(name, pointer);
             state.getCurrentBlock().addInstruction(load);
-            return load;
+            return load; // (返回 i32)
         }
     }
 
@@ -780,5 +886,559 @@ public class IRBuilder {
             //    直接返回 alloca 的地址
             return basePointer; // (例如 %a.addr.0)
         }
+    }
+
+    /**
+     * (新) 访问一个语句 (Stmt) - 这是一个分派器
+     * (对应 原始代码 buildStmt)
+     */
+    private void visitStmt(Stmt stmt) {
+        // // 提示：
+        // // 这是一个分派器，根据 Stmt 的实际类型，
+        // // 调用下面更具体的 visit 方法。
+        //
+        if (stmt instanceof BlockStmt) {
+            // 例如: { ... }
+            visitBlockStmt((BlockStmt) stmt);
+        } else if (stmt instanceof AssignStmt) {
+            // 例如: a = 10;
+            visitAssignStmt((AssignStmt) stmt);
+        } else if (stmt instanceof ExpStmt) {
+            // 例如: a + 1; (有副作用，如函数调用)
+            visitExpStmt((ExpStmt) stmt);
+        } else if (stmt instanceof PrintfStmt) {
+            // 例如: printf("%d", a);
+            visitPrintfStmt((PrintfStmt) stmt);
+        } else if (stmt instanceof ReturnStmt) {
+            // 例如: return a;
+            visitReturnStmt((ReturnStmt) stmt);
+        } else if (stmt instanceof IfStmt) {
+            // 例如: if (a > 0) ...
+            visitIfStmt((IfStmt) stmt);
+        } else if (stmt instanceof ForLoopStmt) { // (根据您的 AST 节点类名修改)
+            // 例如: for (i = 0; i < 10; i = i + 1) ...
+            visitForStmt((ForLoopStmt) stmt);
+        } else if (stmt instanceof BreakStmt) {
+            // 例如: break;
+            visitBreakStmt((BreakStmt) stmt);
+        } else if (stmt instanceof ContinueStmt) {
+            // 例如: continue;
+            visitContinueStmt((ContinueStmt) stmt);
+        }
+    }
+
+    /**
+     * (新) 访问一个块语句 (BlockStmt)
+     * (对应 原始代码 buildStmt 的 BlockStmt 分支)
+     */
+    private void visitBlockStmt(BlockStmt blockStmt) {
+        // 1. *关键*：进入新的作用域。
+        //    从 AST 节点获取 Pass 1 创建的 Scope。
+        scopeManager.setCurrentScope(blockStmt.getScope());
+        // // 2. 递归访问该块的内容
+        visitBlock(blockStmt.getBlock());
+        // // 3. *关键*：退出作用域，返回到父作用域。
+        scopeManager.exitScope();
+    }
+
+    /**
+     * (新) 辅助方法：构建一个赋值操作
+     * *** 这是为解决 ForStmt 冲突而新增的 ***
+     */
+    private void buildAssignment(LVal lVal, Exp exp) {
+        // // 提示：
+        // // 1. 递归访问 *右侧* 表达式，获取计算结果
+        // //    例如: (b + 5) -> %v5
+        Value rValue = visitExp(exp);
+        //
+        // // 2. 递归访问 *左侧* LVal，获取 *地址*
+        // //    (调用我们已实现的 visitLValAssign)
+        // //    例如: a[i] -> %ptr.4
+        Value lValuePointer = visitLValAssign(lVal);
+        //
+        // // 3. 创建 Store 指令
+        // //    例如: "store i32 %v5, i32* %ptr.4"
+        StoreInst store = new StoreInst(rValue, lValuePointer);
+        state.getCurrentBlock().addInstruction(store);
+    }
+
+    /**
+     * (修正) 访问一个赋值语句 (LValExpStmt)
+     * *** 现在调用新的辅助方法 ***
+     */
+    private void visitAssignStmt(AssignStmt stmt) {
+        // // 提示：
+        // // 1. 直接调用我们的新辅助方法
+        buildAssignment(stmt.getLVal(), stmt.getExp());
+    }
+
+    /**
+     * (新) 访问一个 printf 语句 (PrintfStmt)
+     * *** 这是核心的“拆解”逻辑 ***
+     * (对应 原始代码 buildPrintfStmt)
+     */
+    private void visitPrintfStmt(PrintfStmt stmt) {
+        // // 1. 解析 @putint 和 @putstr 函数符号
+        Function putintFunc = (Function) scopeManager.resolve("putint").getIrValue();
+        Function putstrFunc = (Function) scopeManager.resolve("putstr").getIrValue();
+        //
+        // // 2. 获取格式字符串，例如 "Hello %d world\n"
+        String formatString = stmt.getFormatString().getContent();
+        formatString = formatString.substring(1, formatString.length() - 1); // 去掉引号
+        // // 3. 递归访问所有表达式参数，存起来
+        // //    例如: (a, b+1) -> [%v5, %v6]
+        ArrayList<Value> args = new ArrayList<>();
+        for (Exp exp : stmt.getExps()) {
+            args.add(visitExp(exp));
+        }
+        int argIndex = 0; // 参数索引
+        // 4. *关键*：循环拆解字符串
+        //    (使用 String.split("%d", -1) 是一种巧妙的方法)
+        //    例如: "Hello %d world\n%d" -> ["Hello ", " world\n", ""]
+        String[] parts = formatString.split("%d", -1);
+        //
+        for (int i = 0;i < parts.length; i++) {
+            String part = parts[i];
+            if (!part.isEmpty()) {
+                // 5a. 获取或创建 ConstString
+                ConstString constString = module.getOrAddConstString(part);
+                // 5b. 创建 GEP 获取 i8* 指针
+                //    例如: "%ptr.5 = gep [7 x i8]*, @.str.0, i32 0, i32 0"
+                Value idx0 = ConstInt.get(IntegerType.get32(),0);
+                String gepName = nameManager.newVarName();
+                GepInst gep = new GepInst(gepName, constString, new ArrayList<>(java.util.List.of(idx0, idx0)));
+                state.getCurrentBlock().addInstruction(gep);
+                // 5c. 创建 PutstrInst
+                PutstrInst putstrInst = new PutstrInst(putstrFunc, gep);
+                state.getCurrentBlock().addInstruction(putstrInst);
+            }
+            // 6. 处理 %d (如果它不是最后一个 part)
+            if (i < parts.length - 1) {
+                Value arg = args.get(argIndex++);
+                // 6b. 创建 PutintInst
+                //    例如: "call void @putint(i32 %v5)"
+                PutintInst putintInst = new PutintInst(putintFunc,arg);
+                state.getCurrentBlock().addInstruction(putintInst);
+            }
+        }
+    }
+
+    /**
+     * (新) 访问一个表达式语句 (ExpStmt)
+     * (对应 原始代码 buildStmt 的 ExpStmt 分支)
+     */
+    private void visitExpStmt(ExpStmt stmt) {
+        // // 提示：
+        // // 1. 检查是否有表达式 (例如空语句 ";")
+        if (stmt.getExp() != null) {
+            // 2. 递归访问表达式
+            //    这会生成表达式中的所有 IR，
+            //    例如，如果语句是 "myFunc(a);"
+            //    visitExp 会生成 call 指令。
+            //    我们不需要使用 visitExp 的返回值。
+            visitExp(stmt.getExp());
+        }
+    }
+
+    /**
+     * (新) 访问一个返回语句 (ReturnStmt)
+     * (对应 原始代码 buildReturnStmt)
+     */
+    private void visitReturnStmt(ReturnStmt stmt) {
+        // // 提示：
+        // // 1. 获取当前函数，检查返回类型
+        Function func = state.getCurrentFunction();
+        if (func.getReturnType() instanceof  VoidType) {
+            // --- 情况 1：void 函数 (return;) ---
+            RetInst retInst = new RetInst();
+            state.getCurrentBlock().addInstruction(retInst);
+        } else {
+            // --- 情况 2：i32 函数 (return exp;) ---
+            // a. 递归访问表达式，获取返回值
+            //    例如: (a + 1) -> %v7
+            Value retValue = visitExp(stmt.getExp());
+            // b. 创建 ret 指令
+            //    例如: "ret i32 %v7"
+            RetInst retInst = new RetInst(retValue);
+            state.getCurrentBlock().addInstruction(retInst);
+        }
+    }
+
+    /**
+     * (修正) 访问一个 If 语句 (IfStmt)
+     * *** 修正了 BrInst，并添加了可达性逻辑 ***
+     */
+    private void visitIfStmt(IfStmt stmt) {
+        // 1. 获取当前函数
+        Function func = state.getCurrentFunction();
+
+        // 2. 创建分支基本块
+        BasicBlock trueBlock = new BasicBlock(nameManager.newBlockName("if.then"), func);
+        BasicBlock falseBlock;
+
+        // --- *** 关键修改 1：将 followBlock 初始化为 null *** ---
+        // 我们只在 *需要* 它的时候才创建它
+        BasicBlock followBlock = null;
+
+        boolean hasElse = (stmt.getElseStmt() != null);
+
+        if (hasElse) {
+            // a. (有 else) 创建 else 块。follow 块 *可能* 稍后创建。
+            falseBlock = new BasicBlock(nameManager.newBlockName("if.else"), func);
+        } else {
+            // b. (无 else)
+            //    我们 *知道* false 分支需要一个跳转目标。
+            //    *现在* 创建 follow 块 (惰性创建 - 情况1)
+            followBlock = new BasicBlock(nameManager.newBlockName("if.follow"), func);
+            falseBlock = followBlock; // false 分支就是 follow 块
+        }
+
+        // 3. 生成条件跳转
+        visitCond(stmt.getCond(), trueBlock, falseBlock);
+
+        // 4. 填充 True 块
+        state.setCurrentBlock(trueBlock); // *设置* 当前块
+        visitStmt(stmt.getIfStmt());      // *递归* (这会改变 state.currentBlock)
+
+        // --- *** 关键修改 2：只检查终止符，不立即添加 br *** ---
+        // (我们使用 trueBlock，而不是 state.getCurrentBlock()，以防嵌套)
+        boolean trueTerminated = (trueBlock.getTerminator() != null);
+        // (保存 true 分支的 *实际* 结束块，它可能是嵌套 if 的 follow 块)
+        BasicBlock trueEndBlock = state.getCurrentBlock();
+
+        // 5. 填充 False 块 (如果存在)
+        boolean falseTerminated = false; // (如果 !hasElse，false 块就是 follow 块，而 follow 块尚未填充，所以它没有终止)
+        BasicBlock falseEndBlock = null;
+        if (hasElse) {
+            state.setCurrentBlock(falseBlock); // *设置* 当前块
+            visitStmt(stmt.getElseStmt());     // *递归*
+
+            // (我们使用 falseBlock，而不是 state.getCurrentBlock())
+            falseTerminated = (falseBlock.getTerminator() != null);
+            falseEndBlock = state.getCurrentBlock();
+        }
+
+        // 6. *** 关键修改 3：决策 ***
+        //    我们是否需要 followBlock？
+        //    (如果 !hasElse 时，false 分支 *总是* 通向 follow，所以 falseTerminated 永远是 false)
+        if (!hasElse) {
+            falseTerminated = false;
+        }
+
+        boolean needFollowBlock = !trueTerminated || !falseTerminated;
+
+        if (needFollowBlock) {
+
+            if (followBlock == null) {
+                // (这种情况发生在 "if-else" 结构中，且至少一个分支没 ret)
+                // *** 现在才创建 followBlock (惰性创建 - 情况2) ***
+                followBlock = new BasicBlock(nameManager.newBlockName("if.follow"), func);
+            }
+
+            // 7. 为 *未* 终结的块添加 br
+            if (!trueTerminated) {
+                // (true 块 *本身* 未终结，必须跳转到 follow)
+                // (这只会在 trueBlock 包含 *非* 终结指令时发生)
+                // (在您的 f4 示例中, trueBlock 被 ret 终结, trueTerminated = true, 此处跳过)
+                BrInst br = new BrInst(followBlock);
+                trueBlock.addInstruction(br);
+            } else if (trueEndBlock.getTerminator() == null) {
+                // *** 针对 f4 示例的修正 ***
+                // (trueBlock 本身 *被* 终结了 (例如被一个嵌套的 br))
+                // (但是它 *结束* 的块 (trueEndBlock) 没有终结)
+                // (例如 "if.follow4" 是空的)
+                // (我们必须终结 *那个* 块，让它跳转到 *外层* 的 follow)
+                BrInst br = new BrInst(followBlock);
+                trueEndBlock.addInstruction(br);
+            }
+
+            if (hasElse && !falseTerminated) {
+                // (else 块存在且未终结，必须跳转到 follow)
+                BrInst br = new BrInst(followBlock);
+                falseBlock.addInstruction(br);
+            } else if (hasElse && falseEndBlock.getTerminator() == null) {
+                // (处理 else 块的嵌套)
+                BrInst br = new BrInst(followBlock);
+                falseEndBlock.addInstruction(br);
+            }
+
+            // 8. 将当前块设置为 follow 块
+            state.setCurrentBlock(followBlock);
+
+        }
+    }
+
+    /**
+     * (修正) 访问一个 For 语句 (ForLoopStmt)
+     * *** 修正了所有 BrInst ***
+     */
+    private void visitForStmt(ForLoopStmt stmt) {
+        // 1. 获取当前函数
+        Function func = state.getCurrentFunction();
+        // 2. 创建所有需要的块
+        BasicBlock condBlock = new BasicBlock(nameManager.newBlockName("for.cond"), func);
+        BasicBlock bodyBlock = new BasicBlock(nameManager.newBlockName("for.body"), func);
+        BasicBlock updateBlock = new BasicBlock(nameManager.newBlockName("for.update"), func);
+        BasicBlock followBlock = new BasicBlock(nameManager.newBlockName("for.follow"), func);
+
+        // 3. *关键*：将循环信息压入栈 (用于 break/continue)
+        state.pushLoop(updateBlock, followBlock);
+
+        // 3. *修正*：处理 ForStmt1 (初始化)
+        if (stmt.getInit() != null) {
+            ForStmt forInit = stmt.getInit();
+            for (int i = 0; i < forInit.getLVals().size(); i++) {
+                buildAssignment(forInit.getLVals().get(i), forInit.getExps().get(i));
+            }
+        }
+
+        // 4. 从当前块跳转到 Cond 块
+        // --- 修正：必须显式 addInstruction ---
+        BrInst brToCond = new BrInst(condBlock);
+        state.getCurrentBlock().addInstruction(brToCond);
+
+        // 5. 填充 Cond 块
+        state.setCurrentBlock(condBlock);
+        if (stmt.getCond() != null) {
+            visitCond(stmt.getCond(), bodyBlock, followBlock);
+        } else {
+            // --- 修正：必须显式 addInstruction ---
+            BrInst brToBody = new BrInst(bodyBlock); // (无条件)
+            state.getCurrentBlock().addInstruction(brToBody);
+        }
+
+        // 6. 填充 Body 块
+        state.setCurrentBlock(bodyBlock);
+        visitStmt(stmt.getLoopBody());
+        if (state.getCurrentBlock().getTerminator() == null) {
+            BrInst brToUpdate = new BrInst(updateBlock); // (跳转到 Update)
+            state.getCurrentBlock().addInstruction(brToUpdate);
+        }
+
+        // 7. 填充 Update 块
+        state.setCurrentBlock(updateBlock);
+        if (stmt.getUpdate() != null) {
+            ForStmt forUpdate = stmt.getUpdate();
+            for (int i = 0; i < forUpdate.getLVals().size(); i++) {
+                buildAssignment(forUpdate.getLVals().get(i), forUpdate.getExps().get(i));
+            }
+        }
+        if (state.getCurrentBlock().getTerminator() == null) {
+            BrInst brToCond2 = new BrInst(condBlock); // 必须跳转回 condBlock
+            state.getCurrentBlock().addInstruction(brToCond2);
+        }
+
+        // 8. *关键*：弹出循环栈
+        state.popLoop();
+
+        // 9. 将当前块设置为 follow 块
+        state.setCurrentBlock(followBlock);
+    }
+
+    /**
+     * (修正) 访问 Break 语句
+     * *** 修正了 BrInst ***
+     */
+    private void visitBreakStmt(BreakStmt stmt) {
+        // 1. 从循环栈获取 "break" 目标块
+        BasicBlock breakTarget = state.getBreakTarget();
+
+        // 2. 创建无条件跳转
+        // --- 修正：必须显式 addInstruction ---
+        BrInst br = new BrInst(breakTarget);
+        state.getCurrentBlock().addInstruction(br);
+    }
+
+    /**
+     * (修正) 访问 Continue 语句
+     * *** 修正了 BrInst ***
+     */
+    private void visitContinueStmt(ContinueStmt stmt) {
+        // 1. 从循环栈获取 "continue" 目标块
+        BasicBlock continueTarget = state.getContinueTarget();
+
+        // 2. 创建无条件跳转
+        // --- 修正：必须显式 addInstruction ---
+        BrInst br = new BrInst(continueTarget);
+        state.getCurrentBlock().addInstruction(br);
+    }
+
+    /**
+     * (新) 访问一个条件 (Cond)
+     * * 关键*：生成短路求值的控制流
+     * (对应 原始代码 buildCond)
+     *
+     * @param cond AST 节点
+     * @param trueBlock 如果条件为 true，跳转到这里
+     * @param falseBlock 如果条件为 false，跳转到这里
+     */
+    private void visitCond(Cond cond, BasicBlock trueBlock, BasicBlock falseBlock) {
+        // // Cond 的根是 LOrExp
+        ArrayList<LAndExp> lAndExps = cond.getLOrExp().getLAndExps();
+        // // (短路求值：a || b || c)
+        for (int i = 0;i < lAndExps.size();i++) {
+            LAndExp lAndExp = lAndExps.get(i);
+            if (i == lAndExps.size() - 1) {
+                // --- 1. 这是最后一个条件 (c) ---
+                // (如果 c 为 true, 跳到 trueBlock)
+                // (如果 c 为 false, 跳到 falseBlock)
+                visitLAndExp(lAndExp,trueBlock,falseBlock);
+            } else {
+                // --- 2. 这不是最后一个条件 (a 或 b) ---
+                // (创建一个新的块，用于下一个 LAndExp)
+                // (例如: "check.b")
+                BasicBlock nextLAndBlock = new BasicBlock(nameManager.newBlockName("lor.rhs"),state.getCurrentFunction());
+                // (如果 a 为 true, 跳到 trueBlock)
+                // (如果 a 为 false, *不要* 跳到 falseBlock，而是跳到 nextLAndBlock)
+                visitLAndExp(lAndExp,trueBlock,nextLAndBlock);
+                // (更新当前块，为下一个循环做准备)
+                state.setCurrentBlock(nextLAndBlock);
+            }
+        }
+    }
+
+    /**
+     * (新) 访问一个 LAndExp (&&)
+     * (对应 原始代码 buildLAndExp)
+     */
+    private void visitLAndExp(LAndExp lAndExp, BasicBlock trueBlock, BasicBlock falseBlock) {
+        ArrayList<EqExp> eqExps = lAndExp.getEqExps();
+        // // (短路求值：a && b && c)
+        for (int i = 0; i < eqExps.size(); i++) {
+            EqExp eqExp = eqExps.get(i);
+            if (i == eqExps.size() - 1) {
+                // --- 1. 这是最后一个条件 (c) ---
+                // (如果 c 为 true, 跳到 trueBlock)
+                // (如果 c 为 false, 跳到 falseBlock)
+                buildCondBranch(eqExp, trueBlock, falseBlock);
+            } else {
+                // --- 2. 这不是最后一个条件 (a 或 b) ---
+                // (创建一个新的块，用于下一个 EqExp)
+                // (例如: "check.b")
+                BasicBlock nextEqBlock = new BasicBlock(nameManager.newBlockName("land.rhs"), state.getCurrentFunction());
+                // (如果 a 为 true, *不要* 跳到 trueBlock，而是跳到 nextEqBlock)
+                // (如果 a 为 false, 跳到 falseBlock)
+                buildCondBranch(eqExp, nextEqBlock, falseBlock);
+                // (更新当前块，为下一个循环做准备)
+                state.setCurrentBlock(nextEqBlock);
+            }
+        }
+    }
+
+    /**
+     * (新) 辅助方法：生成条件的 BrInst
+     * (对应 原始代码 buildLAndExp 的最后几行)
+     */
+    private void buildCondBranch(EqExp eqExp, BasicBlock trueBlock, BasicBlock falseBlock) {
+        // // 提示：
+        // // 1. 递归访问 EqExp，获取一个 i32 (0 或 1) 或 i1 (bool) 的 Value
+        // //    (例如 a > b -> %v10 (i1))
+        Value condition = visitEqExp(eqExp);
+        // // 2. *关键*：将条件转换为 i1 (bool)
+        // //    (visitEqExp 可能返回 i32 或 i1)
+        Value i1Condition;
+        if (condition.getType() == IntegerType.get32()) {
+            // a. (情况 1: 是 i32)
+            //    我们需要 "icmp ne i32 %v, 0"
+            String name = nameManager.newVarName();
+            Constant zero = ConstInt.get(IntegerType.get32(),0);
+            BinaryInst inst = new BinaryInst(BinaryOpCode.NE, condition, zero);
+            inst.setName(name);
+            state.getCurrentBlock().addInstruction(inst);
+            i1Condition = inst;
+        } else {
+            // b. (情况 2: 已经是 i1)
+            i1Condition = condition;
+        }
+        // // 3. 创建 *条件分支* 指令
+        // //    例如: "br i1 %v10, label %if.then, label %if.else"
+        BrInst br = new BrInst(i1Condition, trueBlock, falseBlock);
+        state.getCurrentBlock().addInstruction(br);
+    }
+
+    /**
+     * (新) 访问一个 EqExp (==, !=)
+     * (对应 原始代码 buildEqExp)
+     * @return 一个 i32 (如果是 RelExp) 或 i1 (如果是比较) 的 Value
+     */
+    private Value visitEqExp(EqExp eqExp) {
+         // 提示：
+         // (这与 visitAddExp/visitMulExp 几乎相同)
+
+         // 1. 访问第一个 RelExp
+         Value left = visitRelExp(eqExp.getRelExps().get(0));
+
+         // 2. (关键) 如果只有一个 RelExp，*不要* 进行比较
+         //    (例如: `if (a)` -> `a` 是 RelExp，我们返回 a (i32))
+         if (eqExp.getRelExps().size() == 1) {
+             return left; // (返回 i32)
+         }
+
+         // 3. 循环处理 (a == b != c ...)
+         for (int i = 1; i < eqExp.getRelExps().size(); i++) {
+             TokenType op = eqExp.getOperators().get(i - 1).getType();
+             Value right = visitRelExp(eqExp.getRelExps().get(i));
+
+             // 4. 确定 OpCode (EQ 或 NE)
+             BinaryOpCode opCode = (op == TokenType.EQL) ? BinaryOpCode.EQ : BinaryOpCode.NE;
+
+             // 5. 创建 BinaryInst (icmp)
+             //    例如: "%v11 = icmp eq i32 %v9, %v10"
+             String name = nameManager.newVarName();
+             BinaryInst inst = new BinaryInst(opCode, left, right);
+             inst.setName(name);
+             state.getCurrentBlock().addInstruction(inst);
+
+             // 6. 更新 left (现在是 i1)
+             left = inst;
+         }
+
+         return left; // (返回 i1)
+    }
+
+    /**
+     * (新) 访问一个 RelExp (<, >, <=, >=)
+     * (对应 原始代码 buildRelExp)
+     * @return 一个 i32 (如果是 AddExp) 或 i1 (如果是比较) 的 Value
+     */
+    private Value visitRelExp(RelExp relExp) {
+         // 提示：
+         // 1. 访问第一个 AddExp
+         Value left = visitAddExp(relExp.getAddExps().get(0));
+
+         // 2. (关键) 如果只有一个 AddExp，*不要* 进行比较
+         if (relExp.getAddExps().size() == 1) {
+             return left; // (返回 i32)
+         }
+
+         // 3. 循环处理 (a > b < c ...)
+         for (int i = 1; i < relExp.getAddExps().size(); i++) {
+             TokenType op = relExp.getOperators().get(i - 1).getType();
+             Value right = visitAddExp(relExp.getAddExps().get(i));
+
+             // 4. 确定 OpCode
+             BinaryOpCode opCode;
+             if (op == TokenType.LSS) {
+                 opCode = BinaryOpCode.SLT;
+             } else if (op == TokenType.LEQ) {
+                 opCode = BinaryOpCode.SLE;
+             } else if (op == TokenType.GRE) {
+                 opCode = BinaryOpCode.SGT;
+             } else { // (op == TokenType.GEQ)
+                 opCode = BinaryOpCode.SGE;
+             }
+
+             // 5. 创建 BinaryInst (icmp)
+             //    例如: "%v9 = icmp sgt i32 %a, %b"
+             String name = nameManager.newVarName();
+             BinaryInst inst = new BinaryInst(opCode, left, right);
+             inst.setName(name);
+             state.getCurrentBlock().addInstruction(inst);
+
+             // 6. 更新 left (现在是 i1)
+             left = inst;
+         }
+
+         return left; // (返回 i1)
     }
 }

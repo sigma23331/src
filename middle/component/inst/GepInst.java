@@ -39,20 +39,29 @@ public class GepInst extends Instruction {
      * GEP 的核心逻辑：计算返回的指针类型
      */
     private static Type calculateResultType(Value pointer, ArrayList<Value> indexes) {
-        // 提示：
-        // GEP 返回的永远是 PtrType
-        // 它的 PointeeType 是由索引“深入”计算得出的
-        //
-        Type currentType = ((PointerType) pointer.getType()).getPointeeType();
-        //
-        // (注意：GEP 的第一个索引是针对 PointeeType 的)
+
+        Type baseType = pointer.getType();
+        Type currentType;
+
+        if (baseType instanceof PointerType) {
+            // --- 情况 1：基础是 alloca (例如 [10 x i32]*) ---
+            currentType = ((PointerType) baseType).getPointeeType();
+        } else {
+            // --- 情况 2：基础是全局常量 (例如 [13 x i8]) ---
+            currentType = baseType;
+        }
+
+        // (注意：GEP 的第一个索引是针对 PointeeType/BaseType 的)
+        // (我们从 i = 1 开始循环，因为 GEP 的第一个索引(i=0)不改变类型)
         for (int i = 1; i < indexes.size(); i++) {
-            //每次索引，我们就深入一层
+            // 每次索引，我们就深入一层
             if (currentType instanceof ArrayType) {
                 currentType = ((ArrayType) currentType).getElementType();
+            } else {
+                // (您不支持结构体，所以这里不需要 else)
             }
         }
-        //
+
         // 最终返回的是指向那个深层类型的指针
         return PointerType.get(currentType);
     }
@@ -64,25 +73,41 @@ public class GepInst extends Instruction {
 
     @Override
     public String toString() {
-        // 提示：
         // 1. 拼装索引字符串
-        //    例如: ", i32 0, i32 %i"
         String indexStr = "";
         for (int i = 1; i < getNumOperands(); i++) {
             Value idx = this.getOperand(i);
             indexStr += ", " + idx.getType().toString() + " " + idx.getName();
         }
-        //
+
+        Value ptr = this.getPointer();    // (例如 @.str.0)
+        Type baseType = ptr.getType();  // (例如 [13 x i8])
+
+        Type pointeeType; // 这是 "inbounds" 关键字后面的类型
+        Type pointerType; // 这是 GEP 接收的指针类型
+
+        // *** 这是第二个修正的逻辑 ***
+        if (baseType instanceof PointerType) {
+            // --- 情况 1：基础是 alloca (例如 %arr.addr) ---
+            // baseType 是 [10 x i32]*
+            pointeeType = ((PointerType) baseType).getPointeeType(); // [10 x i32]
+            pointerType = baseType; // [10 x i32]*
+        } else {
+            // --- 情况 2：基础是全局常量 (例如 @.str.0) ---
+            // baseType 是 [13 x i8]
+            pointeeType = baseType; // [13 x i8]
+            // *关键修正*：指针类型是 baseType 的指针！
+            pointerType = PointerType.get(baseType); // [13 x i8]*
+        }
+        // **************************
+
         // 2. 拼装 GEP 字符串
-        //    例如: "%ptr = getelementptr inbounds i32, i32* %a, i32 0"
-        //    或:   "%e = getelementptr inbounds [10 x i32], [10 x i32]* %arr, i32 0, i32 %i"
-        //
-        Value ptr = this.getPointer();
-        Type pointeeType = ((PointerType) ptr.getType()).getPointeeType();
-        //
+        //    (现在 pointerType 将是 [13 x i8]*)
+
         return this.getName() + " = getelementptr inbounds " +
-               pointeeType.toString() + ", " +
-               ptr.getType().toString() + " " + ptr.getName() +
-               indexStr;
+                pointeeType.toString() + ", " +
+                pointerType.toString() + " " +  // <-- 已修正
+                ptr.getName() +
+                indexStr;
     }
 }

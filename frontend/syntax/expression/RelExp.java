@@ -36,4 +36,8 @@ public class RelExp extends SyntaxNode {
     public ArrayList<AddExp> getAddExps() {
         return operands;
     }
+
+    public ArrayList<Token> getOperators() {
+        return operators;
+    }
 }

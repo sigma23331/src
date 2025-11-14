@@ -73,15 +73,31 @@ public class Module {
      * @return 缓存的或新创建的 ConstString 对象
      */
     public ConstString getOrAddConstString(String rawString) {
-        // // 提示：
-        // // 1. 使用 Java 8 的 computeIfAbsent 来安全地操作缓存
-        // //    (如果 rawString 存在，返回旧的 cs；如果不存在，执行 lambda)
+
+        // 1. 缓存的 Key *必须* 是原始字符串 (rawString)
         return this.constStringCache.computeIfAbsent(rawString, k -> {
+            // --- (Lambda: 仅在缓存未命中时执行) ---
+            // k 就是 rawString (例如 "Hello\n")
+
+            // 2. 【新】处理逻辑：转义
+            String processed = k.replace("\\n", "\\0A");
+            String length =  k.replace("\\n", "1");
+            String llvmString = processed + "\\00"; // (例如 "Hello\0A\00")
+
+            // 3. 【新】处理逻辑：计算 *正确* 的字节长度
+            //    (基于 *原始* 字符串的长度 + 1)
+            int byteLength = length.length() + 1; // (例如 "Hello\n" -> 6 + 1 = 7)
+
+            // 4. 创建名字
             String name = "@.str." + (this.strNameCounter++);
-            ConstString cs = new ConstString(name, k); // k 就是 rawString
-            // 3. (新) 添加到 *模块的列表* 中，以便最终打印
+
+            // 5. 【新】调用 *新* 的 ConstString 构造函数
+            ConstString cs = new ConstString(name, llvmString, byteLength);
+
+            // 6. 添加到 *模块的列表* 中，以便最终打印
             this.constStrings.add(cs);
-            // 4. 返回新对象 (它会被放入 cache)
+
+            // 7. 返回新对象 (它会被放入 cache)
             return cs;
         });
     }

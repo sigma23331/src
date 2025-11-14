@@ -91,7 +91,7 @@ public class Function extends Value {
                 .map(Object::toString)
                 .collect(Collectors.joining("\n"));
             // 例如: "define dso_local i32 @main() { ... }"
-            return "define dso_local " + this.returnType.toString() + " " +
+            return "define dso_local " + this.returnType.toString() + " @" +
                    this.getName() + "(" + paramStr + ") {\n" +
                    bbStr +
                    "\n}";

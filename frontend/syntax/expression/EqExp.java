@@ -35,4 +35,8 @@ public class EqExp extends SyntaxNode {
     public ArrayList<RelExp> getRelExps() {
         return operands;
     }
+
+    public ArrayList<Token> getOperators() {
+        return operators;
+    }
 }

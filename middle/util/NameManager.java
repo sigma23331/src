@@ -9,10 +9,12 @@ public class NameManager {
 
     private int valueCounter; // %v0, %v1, ...
     private int blockCounter; // %b0, %b1, ...
+    private int globalVarCount;
 
     public NameManager() {
         this.valueCounter = 0;
         this.blockCounter = 0;
+        this.globalVarCount = 0;
     }
 
     /**
@@ -39,6 +41,10 @@ public class NameManager {
         String cleanHint = hint.replace("[", "").replace("]", "")
                 .replace("*", "p").replace(" ", "_");
         return "%" + cleanHint + "." + (valueCounter++);
+    }
+
+    public String newGlobalName(String hint) {
+        return hint + (globalVarCount++);
     }
 
     /**

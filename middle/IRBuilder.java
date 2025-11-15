@@ -495,7 +495,7 @@ public class IRBuilder {
 
                 // (給它一個唯一的內部名字，例如 @testNormalExpr.temp_Two)
                 String varName = "@" + state.getCurrentFunction().getName() + "." + symbol.getName();
-
+                varName = nameManager.newGlobalName(varName);
                 // b. 獲取初始值 (如果未初始化，createGlobalInitializer 會返回 0)
                 Constant initializer = createGlobalInitializer(symbol);
 
@@ -807,7 +807,7 @@ public class IRBuilder {
      */
     private Value visitLValValue(LVal lVal) {
         // 1. 解析 LVal 符号
-        VarSymbol symbol = (VarSymbol) scopeManager.resolve(lVal.getIdent().getContent());
+        VarSymbol symbol = (VarSymbol) scopeManager.resolve(lVal.getIdent().getContent(),lVal.getIdent().getLine());
 
         // 2. 获取该变量的 *地址* (指针)
         Value pointer = symbol.getIrValue(); // (例如 %a.addr.0 或 %v0)
@@ -878,7 +878,7 @@ public class IRBuilder {
      */
     private Value visitLValAssign(LVal lVal) {
         // 1. 解析 LVal 符号
-        VarSymbol symbol = (VarSymbol) scopeManager.resolve(lVal.getIdent().getContent());
+        VarSymbol symbol = (VarSymbol) scopeManager.resolve(lVal.getIdent().getContent(),lVal.getIdent().getLine());
 
         // 2. 获取该变量的 *基地址* (指针)
         Value basePointer = symbol.getIrValue(); // (例如 %a.addr.0 或 %v0)
@@ -1359,38 +1359,60 @@ public class IRBuilder {
      * @return 一个 i32 (如果是 RelExp) 或 i1 (如果是比较) 的 Value
      */
     private Value visitEqExp(EqExp eqExp) {
-         // 提示：
-         // (这与 visitAddExp/visitMulExp 几乎相同)
+        // 1. 访问第一个 RelExp
+        Value left = visitRelExp(eqExp.getRelExps().get(0));
 
-         // 1. 访问第一个 RelExp
-         Value left = visitRelExp(eqExp.getRelExps().get(0));
+        // 2. (关键) 如果只有一个 RelExp
+        if (eqExp.getRelExps().size() == 1) {
+            return left; // (返回 i32 或 i1)
+        }
 
-         // 2. (关键) 如果只有一个 RelExp，*不要* 进行比较
-         //    (例如: `if (a)` -> `a` 是 RelExp，我们返回 a (i32))
-         if (eqExp.getRelExps().size() == 1) {
-             return left; // (返回 i32)
-         }
+        // 3. 循环处理 (a == b != c ...)
+        for (int i = 1; i < eqExp.getRelExps().size(); i++) {
+            TokenType op = eqExp.getOperators().get(i - 1).getType();
+            Value right = visitRelExp(eqExp.getRelExps().get(i));
 
-         // 3. 循环处理 (a == b != c ...)
-         for (int i = 1; i < eqExp.getRelExps().size(); i++) {
-             TokenType op = eqExp.getOperators().get(i - 1).getType();
-             Value right = visitRelExp(eqExp.getRelExps().get(i));
+            // --- 【【 必 须 添 加 的 修 正 】】 ---
+            // 在比较 i32 和 i1 之前，必须将 i1 提升为 i32
 
-             // 4. 确定 OpCode (EQ 或 NE)
-             BinaryOpCode opCode = (op == TokenType.EQL) ? BinaryOpCode.EQ : BinaryOpCode.NE;
+            Type i32Type = IntegerType.get32();
+            Type i1Type = IntegerType.get1();
 
-             // 5. 创建 BinaryInst (icmp)
-             //    例如: "%v11 = icmp eq i32 %v9, %v10"
-             String name = nameManager.newVarName();
-             BinaryInst inst = new BinaryInst(opCode, left, right);
-             inst.setName(name);
-             state.getCurrentBlock().addInstruction(inst);
+            if (left.getType() == i32Type && right.getType() == i1Type) {
+                // 情况: i32 == i1  (例如 1 == (a > 3))
+                // 提升 right
+                String zextName = nameManager.newVarName();
+                ZextInst zext = new ZextInst(zextName, right, i32Type);
+                state.getCurrentBlock().addInstruction(zext);
+                right = zext; // (现在 right 也是 i32 了)
 
-             // 6. 更新 left (现在是 i1)
-             left = inst;
-         }
+            } else if (left.getType() == i1Type && right.getType() == i32Type) {
+                // 情况: i1 == i32  (例如 (a > 3) == 1)
+                // 提升 left
+                String zextName = nameManager.newVarName();
+                ZextInst zext = new ZextInst(zextName, left, i32Type);
+                state.getCurrentBlock().addInstruction(zext);
+                left = zext; // (现在 left 也是 i32 了)
+            }
+            // (如果两者都是 i32，或两者都是 i1，我们不需要做任何事)
+            // --- 【 修 正 结 束 】 ---
 
-         return left; // (返回 i1)
+
+            // 4. 确定 OpCode (EQ 或 NE)
+            BinaryOpCode opCode = (op == TokenType.EQL) ? BinaryOpCode.EQ : BinaryOpCode.NE;
+
+            // 5. 创建 BinaryInst (icmp)
+            //    (现在 left 和 right 的类型保证是匹配的)
+            String name = nameManager.newVarName();
+            BinaryInst inst = new BinaryInst(opCode, left, right);
+            inst.setName(name);
+            state.getCurrentBlock().addInstruction(inst);
+
+            // 6. 更新 left (现在是 i1)
+            left = inst;
+        }
+
+        return left; // (返回 i1)
     }
 
     /**

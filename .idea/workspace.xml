@@ -4,23 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="90fa020b-2e1d-46d4-9e79-4a11ccd6df54" name="更改" comment="IRBuilder_test_2">
+    <list default="true" id="90fa020b-2e1d-46d4-9e79-4a11ccd6df54" name="更改" comment="IRBuilder_pass">
+      <change afterPath="$PROJECT_DIR$/backend/MipsFile.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/enums/AsmOp.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/enums/Register.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/global/GlobalAssembly.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/text/MipsInstruction.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/text/TextAssembly.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/error.txt" beforeDir="false" afterPath="$PROJECT_DIR$/error.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/llvm_ir.txt" beforeDir="false" afterPath="$PROJECT_DIR$/llvm_ir.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/middle/IRBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/IRBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/middle/util/NameManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/util/NameManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/error.txt" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/error.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/llvm_ir.txt" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/llvm_ir.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/middle/IRBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/middle/IRBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/middle/util/NameManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/middle/util/NameManager.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/src.zip" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/symbol.txt" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/symbol.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/testfile.txt" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/testfile.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src.zip" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/symbol.txt" beforeDir="false" afterPath="$PROJECT_DIR$/symbol.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/testfile.txt" beforeDir="false" afterPath="$PROJECT_DIR$/testfile.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,12 +35,12 @@
     &quot;assignee&quot;: &quot;sigma23331&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/sigma23331/src.git",
-    "accountId": "4db52ead-de5d-4efb-ad6e-2879c6b0233d"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/sigma23331/src.git&quot;,
+    &quot;accountId&quot;: &quot;4db52ead-de5d-4efb-ad6e-2879c6b0233d&quot;
   }
-}]]></component>
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 7
 }</component>
@@ -61,6 +52,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "git-widget-placeholder": "main",
     "kotlin-language-version-configured": "true",
@@ -123,7 +115,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763107889139</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="IRBuilder_pass">
+      <option name="closed" value="true" />
+      <created>1763213811438</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1763213811438</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -143,7 +143,8 @@
     <MESSAGE value="IRBuilder_test_5" />
     <MESSAGE value="IRBuilder_test_6" />
     <MESSAGE value="IRBuilder_test_8" />
-    <option name="LAST_COMMIT_MESSAGE" value="IRBuilder_test_8" />
+    <MESSAGE value="IRBuilder_pass" />
+    <option name="LAST_COMMIT_MESSAGE" value="IRBuilder_pass" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

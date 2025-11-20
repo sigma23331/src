@@ -1,0 +1,59 @@
+package backend.enums;
+
+public enum Register {
+    ZERO("$zero"),
+    V0("$v0"),
+    V1("$v1"),
+    A0("$a0"),
+    A1("$a1"),
+    A2("$a2"),
+    A3("$a3"),
+    T0("$t0"),
+    T1("$t1"),
+    T2("$t2"),
+    T3("$t3"),
+    T4("$t4"),
+    T5("$t5"),
+    T6("$t6"),
+    T7("$t7"),
+    S0("$s0"),
+    S1("$s1"),
+    S2("$s2"),
+    S3("$s3"),
+    S4("$s4"),
+    S5("$s5"),
+    S6("$s6"),
+    S7("$s7"),
+    T8("$t8"),
+    T9("$t9"),
+    K0("$k0"),
+    K1("$k1"),
+    GP("$gp"),
+    SP("$sp"),
+    FP("$fp"),
+    RA("$ra");
+
+    // 这个 poolSize 可能是为了寄存器分配器预留的常量（如 t0-t9 + s0-s7 共18个可用寄存器）
+    private static final int poolSize = 18;
+    private final String name;
+
+    Register(String name) {
+        this.name = name;
+    }
+
+    /**
+     * 用于获取偏移后的寄存器，例如 getByOffset(A0, 1) 返回 A1
+     */
+    public static Register getByOffset(Register register, int offset) {
+        return Register.values()[register.ordinal() + offset];
+    }
+
+    public static Register indexToReg(int index) {
+        return values()[index];
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+}

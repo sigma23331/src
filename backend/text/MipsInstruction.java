@@ -7,7 +7,7 @@ public abstract class MipsInstruction implements TextAssembly {
 
     public MipsInstruction() {
         // 核心修改：创建指令时，自动加入到全局单例 MipsFile 中
-        MipsFile.getInstance().addToTextSegment(this);
+        MipsFile.getInstance().toText(this);
     }
 
     @Override

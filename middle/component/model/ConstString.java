@@ -45,6 +45,10 @@ public class ConstString extends Constant {
         this.setName(name);
     }
 
+    public String getLlvmString() {
+        return llvmString;
+    }
+
     @Override
     public String toString() {
         // (此方法保持不变，它现在可以完美工作)

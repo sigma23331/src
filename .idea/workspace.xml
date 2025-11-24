@@ -5,13 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="90fa020b-2e1d-46d4-9e79-4a11ccd6df54" name="更改" comment="IRBuilder_pass">
-      <change afterPath="$PROJECT_DIR$/backend/MipsFile.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/enums/AsmOp.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/enums/Register.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/global/GlobalAssembly.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/text/MipsInstruction.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/text/TextAssembly.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/MipsBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/MipsBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/model/ConstString.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/model/ConstString.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,17 +31,16 @@
     &quot;assignee&quot;: &quot;sigma23331&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/sigma23331/src.git",
-    "accountId": "85cca7bf-d7ea-47a2-8877-f1ee64c57681"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/sigma23331/src.git&quot;,
+    &quot;accountId&quot;: &quot;4db52ead-de5d-4efb-ad6e-2879c6b0233d&quot;
   }
-}]]></component>
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 7
 }</component>
   <component name="ProjectId" id="35HiKaCuaGQnkEcwcwLYcPbh1KC" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -124,15 +119,7 @@
       <option name="project" value="LOCAL" />
       <updated>1763213811438</updated>
     </task>
-    <task id="LOCAL-00007" summary="objectCodeGeneration_test_2">
-      <option name="closed" value="true" />
-      <created>1763649793258</created>
-      <option name="number" value="00007" />
-      <option name="presentableId" value="LOCAL-00007" />
-      <option name="project" value="LOCAL" />
-      <updated>1763649793258</updated>
-    </task>
-    <option name="localTasksCounter" value="8" />
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -153,8 +140,7 @@
     <MESSAGE value="IRBuilder_test_6" />
     <MESSAGE value="IRBuilder_test_8" />
     <MESSAGE value="IRBuilder_pass" />
-    <MESSAGE value="objectCodeGeneration_test_2" />
-    <option name="LAST_COMMIT_MESSAGE" value="objectCodeGeneration_test_2" />
+    <option name="LAST_COMMIT_MESSAGE" value="IRBuilder_pass" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

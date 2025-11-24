@@ -64,6 +64,10 @@ public abstract class Value { // 设为 abstract，与您的源代码不同
         this.useList.remove(use);
     }
 
+    public LinkedList<Use> getUseList() {
+        return useList;
+    }
+
     /**
      * 替换所有对 *这个* Value 的使用，改为使用 *newValue*。
      * (这对应于您源代码中的 replaceByNewValue)

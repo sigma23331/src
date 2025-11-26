@@ -2,17 +2,390 @@ declare i32 @getint()
 declare void @putint(i32 )
 declare void @putstr(i8* )
 
-%@test.x.2 = dso_local global i32 -10
+@.str.0 = private unnamed_addr constant [12 x i8] c"error: n = \00"
+@.str.1 = private unnamed_addr constant [6 x i8] c" < 0\0A\00"
+@.str.2 = private unnamed_addr constant [13 x i8] c"meow~ meow~\0A\00"
+@.str.3 = private unnamed_addr constant [10 x i8] c"23371015\0A\00"
+@.str.4 = private unnamed_addr constant [2 x i8] c"\0A\00"
+@.str.5 = private unnamed_addr constant [4 x i8] c"   \00"
+@.str.6 = private unnamed_addr constant [3 x i8] c"x\0A\00"
+@.str.7 = private unnamed_addr constant [16 x i8] c"test finished!\0A\00"
 
-define dso_local void @test(i32 %v0) {
+@g_default = dso_local global i32 0
+@g_var = dso_local global i32 20
+@G_CON1 = dso_local constant i32 203
+@G_CON2 = dso_local constant i32 1
+@G_CON3 = dso_local constant i32 2
+@G_CON4 = dso_local constant i32 3
+@G_CON_ARR = dso_local constant [4 x i32] [i32 4, i32 3, i32 2, i32 1]
+@g_arr = dso_local global [10 x i32] [i32 2, i32 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
+@map.map_cnt0 = dso_local global i32 0
+
+define dso_local i32 @factorial(i32 %v0) {
 entry0:
-	%y.addr.1 = alloca i32
-	store i32 %v0, i32* %y.addr.1
+	%n.addr.1 = alloca i32
+	store i32 %v0, i32* %n.addr.1
+	%v2 = load i32, i32* %n.addr.1
+	%v3 = icmp slt i32 %v2, 0
+	br i1 %v3, label %if.then1, label %if.follow2
+if.then1:
+	%v4 = load i32, i32* %n.addr.1
+	%v5 = getelementptr inbounds [12 x i8], [12 x i8]* @.str.0, i32 0, i32 0
+	call void @putstr(i8* %v5)
+	call void @putint(i32 %v4)
+	%v6 = getelementptr inbounds [6 x i8], [6 x i8]* @.str.1, i32 0, i32 0
+	call void @putstr(i8* %v6)
+	ret i32 0
+if.follow2:
+	%v7 = load i32, i32* %n.addr.1
+	%v8 = icmp eq i32 %v7, 0
+	br i1 %v8, label %if.then3, label %if.follow4
+if.then3:
+	ret i32 1
+if.follow4:
+	%v9 = load i32, i32* %n.addr.1
+	%v10 = load i32, i32* %n.addr.1
+	%v11 = sub i32 %v10, 1
+	%v12 = call i32 @factorial(i32 %v11)
+	%v13 = mul i32 %v9, %v12
+	ret i32 %v13
+}
+
+define dso_local void @swap0(i32* %v0, i32* %v1) {
+entry0:
+	%t.addr.2 = alloca i32
+	%v3 = getelementptr inbounds i32, i32* %v0, i32 0
+	%v4 = load i32, i32* %v3
+	store i32 %v4, i32* %t.addr.2
+	%v5 = getelementptr inbounds i32, i32* %v1, i32 0
+	%v6 = load i32, i32* %v5
+	%v7 = getelementptr inbounds i32, i32* %v0, i32 0
+	store i32 %v6, i32* %v7
+	%v8 = load i32, i32* %t.addr.2
+	%v9 = getelementptr inbounds i32, i32* %v1, i32 0
+	store i32 %v8, i32* %v9
+	ret void
+}
+
+define dso_local i32 @copyEven(i32* %v0, i32* %v1, i32 %v2) {
+entry0:
+	%len.addr.3 = alloca i32
+	%ret.addr.4 = alloca i32
+	%i.addr.5 = alloca i32
+	store i32 %v2, i32* %len.addr.3
+	store i32 0, i32* %ret.addr.4
+	store i32 0, i32* %i.addr.5
+	store i32 0, i32* %i.addr.5
+	br label %for.cond1
+for.cond1:
+	%v6 = load i32, i32* %i.addr.5
+	%v7 = load i32, i32* %len.addr.3
+	%v8 = icmp slt i32 %v6, %v7
+	br i1 %v8, label %for.body2, label %for.follow4
+for.body2:
+	%v9 = load i32, i32* %i.addr.5
+	%v10 = getelementptr inbounds i32, i32* %v1, i32 %v9
+	%v11 = load i32, i32* %v10
+	%v12 = srem i32 %v11, 2
+	%v13 = icmp eq i32 %v12, 0
+	br i1 %v13, label %if.then5, label %if.follow6
+for.update3:
+	%v21 = load i32, i32* %i.addr.5
+	%v22 = add i32 %v21, 1
+	store i32 %v22, i32* %i.addr.5
+	br label %for.cond1
+for.follow4:
+	%v23 = load i32, i32* %ret.addr.4
+	ret i32 %v23
+if.then5:
+	%v14 = load i32, i32* %i.addr.5
+	%v15 = getelementptr inbounds i32, i32* %v1, i32 %v14
+	%v16 = load i32, i32* %v15
+	%v17 = load i32, i32* %i.addr.5
+	%v18 = getelementptr inbounds i32, i32* %v0, i32 %v17
+	store i32 %v16, i32* %v18
+	%v19 = load i32, i32* %ret.addr.4
+	%v20 = add i32 %v19, 1
+	store i32 %v20, i32* %ret.addr.4
+	br label %if.follow6
+if.follow6:
+	br label %for.update3
+}
+
+define dso_local i32 @map(i32 %v0) {
+entry0:
+	%num.addr.1 = alloca i32
+	store i32 %v0, i32* %num.addr.1
+	%v2 = load i32, i32* @map.map_cnt0
+	%v3 = add i32 %v2, 1
+	store i32 %v3, i32* @map.map_cnt0
+	%v4 = load i32, i32* %num.addr.1
+	%v5 = add i32 31, %v4
+	%v6 = load i32, i32* @map.map_cnt0
+	%v7 = add i32 %v5, %v6
+	%v8 = mul i32 %v7, 5
+	%v9 = srem i32 %v8, 17
+	ret i32 %v9
+}
+
+define dso_local void @meow() {
+entry0:
+	%v0 = getelementptr inbounds [13 x i8], [13 x i8]* @.str.2, i32 0, i32 0
+	call void @putstr(i8* %v0)
+	ret void
+}
+
+define dso_local void @getArr(i32* %v0, i32 %v1) {
+entry0:
+	%n.addr.2 = alloca i32
+	%i.addr.3 = alloca i32
+	store i32 %v1, i32* %n.addr.2
+	store i32 0, i32* %i.addr.3
+	br label %for.cond1
+for.cond1:
+	%v4 = load i32, i32* %i.addr.3
+	%v5 = load i32, i32* %n.addr.2
+	%v6 = icmp slt i32 %v4, %v5
+	br i1 %v6, label %for.body2, label %for.follow4
+for.body2:
+	%v7 = call i32 @getint()
+	%v8 = load i32, i32* %i.addr.3
+	%v9 = getelementptr inbounds i32, i32* %v0, i32 %v8
+	store i32 %v7, i32* %v9
+	br label %for.update3
+for.update3:
+	%v10 = load i32, i32* %i.addr.3
+	%v11 = add i32 %v10, 1
+	store i32 %v11, i32* %i.addr.3
+	br label %for.cond1
+for.follow4:
 	ret void
 }
 
 define dso_local i32 @main() {
 entry0:
-	call void @test(i32 1)
+	%var1.addr.1 = alloca i32
+	%var2.addr.2 = alloca i32
+	%var3.addr.3 = alloca i32
+	%arr1.addr.4 = alloca [5 x i32]
+	%arr2.addr.5 = alloca [1 x i32]
+	%k.addr.28 = alloca i32
+	%cnt.addr.35 = alloca i32
+	%i.addr.40 = alloca i32
+	%j.addr.41 = alloca i32
+	%v0 = getelementptr inbounds [10 x i8], [10 x i8]* @.str.3, i32 0, i32 0
+	call void @putstr(i8* %v0)
+	store i32 6, i32* %var3.addr.3
+	%v6 = call i32 @getint()
+	%v7 = getelementptr inbounds [1 x i32], [1 x i32]* %arr2.addr.5, i32 0, i32 0
+	store i32 %v6, i32* %v7
+	%v8 = getelementptr inbounds [5 x i32], [5 x i32]* %arr1.addr.4, i32 0, i32 0
+	call void @getArr(i32* %v8, i32 3)
+	%v9 = getelementptr inbounds [5 x i32], [5 x i32]* %arr1.addr.4, i32 0, i32 0
+	%v10 = getelementptr inbounds [1 x i32], [1 x i32]* %arr2.addr.5, i32 0, i32 0
+	call void @swap0(i32* %v9, i32* %v10)
+	call void @meow()
+	%v11 = sub i32 2, 3
+	store i32 %v11, i32* %var1.addr.1
+	%v12 = load i32, i32* %var1.addr.1
+	%v13 = call i32 @factorial(i32 %v12)
+	store i32 %v13, i32* %var2.addr.2
+	%v14 = load i32, i32* %var3.addr.3
+	%v15 = call i32 @factorial(i32 %v14)
+	%v16 = call i32 @map(i32 %v15)
+	call void @putint(i32 %v16)
+	%v17 = getelementptr inbounds [2 x i8], [2 x i8]* @.str.4, i32 0, i32 0
+	call void @putstr(i8* %v17)
+	%v18 = getelementptr inbounds [5 x i32], [5 x i32]* %arr1.addr.4, i32 0, i32 0
+	%v19 = load i32, i32* %v18
+	%v20 = call i32 @map(i32 %v19)
+	%v21 = getelementptr inbounds [4 x i8], [4 x i8]* @.str.5, i32 0, i32 0
+	call void @putstr(i8* %v21)
+	call void @putint(i32 %v20)
+	%v22 = getelementptr inbounds [3 x i8], [3 x i8]* @.str.6, i32 0, i32 0
+	call void @putstr(i8* %v22)
+	%v23 = getelementptr inbounds [5 x i32], [5 x i32]* %arr1.addr.4, i32 0, i32 0
+	%v24 = getelementptr inbounds [10 x i32], [10 x i32]* @g_arr, i32 0, i32 0
+	%v25 = call i32 @copyEven(i32* %v23, i32* %v24, i32 5)
+	%v26 = call i32 @map(i32 %v25)
+	call void @putint(i32 %v26)
+	%v27 = getelementptr inbounds [2 x i8], [2 x i8]* @.str.4, i32 0, i32 0
+	call void @putstr(i8* %v27)
+	store i32 0, i32* %k.addr.28
+	br label %for.cond1
+for.cond1:
+	%v29 = load i32, i32* %k.addr.28
+	%v30 = icmp slt i32 %v29, 1
+	br i1 %v30, label %for.body2, label %for.follow4
+for.body2:
+	%v31 = load i32, i32* %k.addr.28
+	call void @putint(i32 %v31)
+	%v32 = getelementptr inbounds [2 x i8], [2 x i8]* @.str.4, i32 0, i32 0
+	call void @putstr(i8* %v32)
+	br label %for.update3
+for.update3:
+	%v33 = load i32, i32* %k.addr.28
+	%v34 = add i32 %v33, 1
+	store i32 %v34, i32* %k.addr.28
+	br label %for.cond1
+for.follow4:
+	%v36 = sub i32 0, 2
+	%v37 = sub i32 0, %v36
+	%v38 = add i32 %v37, 1
+	%v39 = sub i32 %v38, 3
+	store i32 %v39, i32* %cnt.addr.35
+	store i32 0, i32* %i.addr.40
+	store i32 1, i32* %j.addr.41
+	br label %for.cond5
+for.cond5:
+	%v42 = load i32, i32* %i.addr.40
+	%v43 = icmp slt i32 %v42, 2
+	br i1 %v43, label %for.body6, label %for.follow8
+for.body6:
+	%v44 = load i32, i32* %cnt.addr.35
+	%v45 = add i32 %v44, 1
+	store i32 %v45, i32* %cnt.addr.35
+	br label %for.update7
+for.update7:
+	%v46 = load i32, i32* %i.addr.40
+	%v47 = add i32 %v46, 2
+	store i32 %v47, i32* %i.addr.40
+	br label %for.cond5
+for.follow8:
+	store i32 0, i32* %i.addr.40
+	store i32 1, i32* %j.addr.41
+	br label %for.cond9
+for.cond9:
+	br label %for.body10
+for.body10:
+	%v48 = load i32, i32* %i.addr.40
+	%v49 = icmp sge i32 %v48, 5
+	br i1 %v49, label %if.then13, label %if.else15
+for.update11:
+	%v54 = load i32, i32* %i.addr.40
+	%v55 = add i32 %v54, 1
+	store i32 %v55, i32* %i.addr.40
+	br label %for.cond9
+for.follow12:
+	store i32 0, i32* %i.addr.40
+	br label %for.cond19
+if.then13:
+	br label %for.follow12
+if.follow14:
+	br label %for.update11
+if.else15:
+	%v50 = load i32, i32* %i.addr.40
+	%v51 = icmp eq i32 %v50, 2
+	br i1 %v51, label %if.then16, label %if.else18
+if.then16:
+	br label %for.update11
+if.follow17:
+	br label %if.follow14
+if.else18:
+	%v52 = load i32, i32* %cnt.addr.35
+	%v53 = add i32 %v52, 2
+	store i32 %v53, i32* %cnt.addr.35
+	br label %if.follow17
+for.cond19:
+	%v56 = load i32, i32* %i.addr.40
+	%v57 = icmp slt i32 %v56, 3
+	br i1 %v57, label %for.body20, label %for.follow22
+for.body20:
+	%v58 = load i32, i32* %i.addr.40
+	%v59 = add i32 %v58, 1
+	store i32 %v59, i32* %i.addr.40
+	%v60 = load i32, i32* %cnt.addr.35
+	%v61 = add i32 %v60, 1
+	store i32 %v61, i32* %cnt.addr.35
+	br label %for.update21
+for.update21:
+	br label %for.cond19
+for.follow22:
+	store i32 0, i32* %i.addr.40
+	br label %for.cond23
+for.cond23:
+	br label %for.body24
+for.body24:
+	%v62 = load i32, i32* %i.addr.40
+	%v63 = icmp sge i32 %v62, 2
+	br i1 %v63, label %if.then27, label %if.follow28
+for.update25:
+	br label %for.cond23
+for.follow26:
+	br label %for.cond29
+if.then27:
+	br label %for.follow26
+if.follow28:
+	%v64 = load i32, i32* %cnt.addr.35
+	%v65 = add i32 %v64, 1
+	store i32 %v65, i32* %cnt.addr.35
+	%v66 = load i32, i32* %i.addr.40
+	%v67 = add i32 %v66, 1
+	store i32 %v67, i32* %i.addr.40
+	br label %for.update25
+for.cond29:
+	%v68 = load i32, i32* %i.addr.40
+	%v69 = icmp sle i32 %v68, 1
+	br i1 %v69, label %for.body30, label %for.follow32
+for.body30:
+	%v70 = load i32, i32* %cnt.addr.35
+	%v71 = add i32 %v70, 1
+	store i32 %v71, i32* %cnt.addr.35
+	br label %for.update31
+for.update31:
+	br label %for.cond29
+for.follow32:
+	br label %for.cond33
+for.cond33:
+	br label %for.body34
+for.body34:
+	%v72 = load i32, i32* %i.addr.40
+	%v73 = icmp sge i32 %v72, 5
+	br i1 %v73, label %if.then37, label %if.follow38
+for.update35:
+	%v76 = load i32, i32* %i.addr.40
+	%v77 = add i32 %v76, 1
+	store i32 %v77, i32* %i.addr.40
+	br label %for.cond33
+for.follow36:
+	store i32 0, i32* %i.addr.40
+	br label %for.cond39
+if.then37:
+	br label %for.follow36
+if.follow38:
+	%v74 = load i32, i32* %cnt.addr.35
+	%v75 = add i32 %v74, 1
+	store i32 %v75, i32* %cnt.addr.35
+	br label %for.update35
+for.cond39:
+	br label %for.body40
+for.body40:
+	%v78 = load i32, i32* %cnt.addr.35
+	%v79 = add i32 %v78, 1
+	store i32 %v79, i32* %cnt.addr.35
+	%v80 = load i32, i32* %i.addr.40
+	%v81 = icmp sgt i32 %v80, 10
+	br i1 %v81, label %if.then43, label %if.follow44
+for.update41:
+	br label %for.cond39
+for.follow42:
+	%v84 = load i32, i32* %cnt.addr.35
+	%v85 = call i32 @map(i32 %v84)
+	call void @putint(i32 %v85)
+	%v86 = getelementptr inbounds [2 x i8], [2 x i8]* @.str.4, i32 0, i32 0
+	call void @putstr(i8* %v86)
+	%v87 = load i32, i32* @g_default
+	call void @putint(i32 %v87)
+	%v88 = getelementptr inbounds [2 x i8], [2 x i8]* @.str.4, i32 0, i32 0
+	call void @putstr(i8* %v88)
+	%v89 = getelementptr inbounds [16 x i8], [16 x i8]* @.str.7, i32 0, i32 0
+	call void @putstr(i8* %v89)
 	ret i32 0
+if.then43:
+	br label %for.follow42
+if.follow44:
+	%v82 = load i32, i32* %i.addr.40
+	%v83 = add i32 %v82, 1
+	store i32 %v83, i32* %i.addr.40
+	br label %for.update41
 }

@@ -19,13 +19,17 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import backend.MipsBuilder;
+import backend.MipsFile;
+
 public class Compiler {
     public static void main(String[] args) {
         // 定义输入输出文件名
         String inputFile = "testfile.txt";
-        String symbolOutputFile = "symbol.txt"; // 用于成功时的符号表输出
-        String errorOutputFile = "error.txt";   // 用于错误时的输出
+        String symbolOutputFile = "symbol.txt";
+        String errorOutputFile = "error.txt";
         String irOutputFile = "llvm_ir.txt";
+        String mipsOutputFile = "mips.txt"; // --- 【新增：MIPS 输出文件】 ---
 
         try {
             // 1. 读取 testfile.txt 中的全部内容
@@ -34,7 +38,7 @@ public class Compiler {
 
             // 2. 初始化错误处理器和符号记录器
             ErrorHandler errorHandler = ErrorHandler.getInstance();
-            SymbolLogger.getInstance().clear(); // 清空上次运行的记录
+            SymbolLogger.getInstance().clear();
 
             // 3. 词法分析
             Lexer lexer = new Lexer(sourceCode);
@@ -57,26 +61,35 @@ public class Compiler {
 
             // --- 【语义分析结束】 ---
 
-            // 5. --- 【修改】检查最终结果并输出 ---
+            // 5. 检查最终结果并输出
             if (errorHandler.hasErrors()) {
                 // 如果在任何阶段发现了错误，则输出错误并终止
                 printErrors(errorHandler.getSortedErrors(), errorOutputFile);
             } else {
                 // --- 成功！ ---
 
-                // 1. (原逻辑) 输出符号表
+                // 1. 输出符号表
                 printSymbols(SymbolLogger.getInstance().getRecords(), symbolOutputFile);
 
-                // --- 【新增：第 3 遍：IR 生成】 ---
-                // 2. 创建 IRBuilder (Pass 3)
-                //    (我们重用了 Pass 1 填充好的 ScopeManager)
+                // --- 第 3 遍：IR 生成 ---
                 IRBuilder irBuilder = new IRBuilder(scopeManager);
-
-                // 3. *关键*：执行 IR 生成，获取 IR Module
                 Module irModule = irBuilder.build(astRoot);
 
-                // 4. 将生成的 IR Module 写入文件
+                // 2. 输出 IR 到文件
                 printIR(irModule, irOutputFile);
+
+                // --- 【新增：第 4 遍：后端生成 MIPS】 ---
+
+                // 3. 创建 MipsBuilder
+                // 参数2: optimizeOn (是否开启优化)，目前我们传入 false
+                MipsBuilder mipsBuilder = new MipsBuilder(irModule, false);
+
+                // 4. 执行构建
+                // 这会将指令写入 MipsFile 的单例对象中
+                mipsBuilder.build(false);
+
+                // 5. 输出 MIPS 汇编到文件
+                printMips(mipsOutputFile);
             }
 
         } catch (IOException e) {
@@ -86,22 +99,26 @@ public class Compiler {
     }
 
     /**
-     * 【新增方法】将 IR Module 写入 llvm_ir.txt
+     * 【新增方法】将 MipsFile 单例中的内容写入 mips.txt
      */
+    private static void printMips(String filePath) throws IOException {
+        // 获取全局单例生成的汇编字符串
+        String mipsCode = MipsFile.getInstance().toString();
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            writer.write(mipsCode);
+        }
+    }
+
+    // ... (printIR, printSymbols, printErrors 保持不变) ...
+
     private static void printIR(Module module, String filePath) throws IOException {
-        // // 提示：
-        // // 1. 调用我们 Module 类的 toString() 方法
         String irCode = module.toString();
-        //
-        // // 2. 将字符串写入文件
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             writer.write(irCode);
         }
     }
 
-    /**
-     * 【新增方法】将符号记录列表写入 symbol.txt
-     */
     private static void printSymbols(List<SymbolRecord> records, String filePath) throws IOException {
         records.sort(Comparator.comparingInt(SymbolRecord::getScopeId));
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
@@ -112,9 +129,6 @@ public class Compiler {
         }
     }
 
-    /**
-     * 将 Error 列表按照指定格式写入文件
-     */
     private static void printErrors(List<Error> errors, String filePath) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             for (Error error : errors) {

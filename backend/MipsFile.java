@@ -49,7 +49,7 @@ public class MipsFile {
             sb.append(globalAssembly).append("\n");
         }
         sb.append("\n");
-        sb.append("text:\n");
+        sb.append(".text:\n");
         for (int i = 0; i < textSegment.size(); i++) {
             TextAssembly assembly = textSegment.get(i);
             if (assembly instanceof Label) {

@@ -4,9 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="90fa020b-2e1d-46d4-9e79-4a11ccd6df54" name="更改" comment="IRBuilder_test_2">
-      <change beforePath="$PROJECT_DIR$/frontend/syntax/expression/UnaryExp.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/syntax/expression/UnaryExp.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/middle/IRBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/IRBuilder.java" afterDir="false" />
+    <list default="true" id="90fa020b-2e1d-46d4-9e79-4a11ccd6df54" name="更改" comment="IRBuilder_pass">
+      <change afterPath="$PROJECT_DIR$/backend/MipsFile.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/enums/AsmOp.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/enums/Register.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/global/GlobalAssembly.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/text/MipsInstruction.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/text/TextAssembly.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,22 +50,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true",
-    "应用程序.Compiler.executor": "Run"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;应用程序.Compiler.executor&quot;: &quot;Run&quot;
   },
-  "keyToStringList": {
-    "GitStage.ChangesTree.GroupingKeys": [
-      "directory",
-      "module",
-      "repository"
+  &quot;keyToStringList&quot;: {
+    &quot;GitStage.ChangesTree.GroupingKeys&quot;: [
+      &quot;directory&quot;,
+      &quot;module&quot;,
+      &quot;repository&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="默认任务">
@@ -110,7 +116,31 @@
       <option name="project" value="LOCAL" />
       <updated>1763107889139</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="IRBuilder_pass">
+      <option name="closed" value="true" />
+      <created>1763213811438</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1763213811438</updated>
+    </task>
+    <task id="LOCAL-00007" summary="objectCodeGeneration_test_2">
+      <option name="closed" value="true" />
+      <created>1763649793258</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1763649793258</updated>
+    </task>
+    <task id="LOCAL-00008" summary="objectCodeGeneration_test_5">
+      <option name="closed" value="true" />
+      <created>1763996643353</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1763996643353</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -130,7 +160,10 @@
     <MESSAGE value="IRBuilder_test_5" />
     <MESSAGE value="IRBuilder_test_6" />
     <MESSAGE value="IRBuilder_test_8" />
-    <option name="LAST_COMMIT_MESSAGE" value="IRBuilder_test_8" />
+    <MESSAGE value="IRBuilder_pass" />
+    <MESSAGE value="objectCodeGeneration_test_2" />
+    <MESSAGE value="objectCodeGeneration_test_5" />
+    <option name="LAST_COMMIT_MESSAGE" value="objectCodeGeneration_test_5" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -139,6 +172,11 @@
           <url>file://$PROJECT_DIR$/middle/component/inst/CallInst.java</url>
           <line>85</line>
           <option name="timeStamp" value="11" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/middle/SemanticValidator.java</url>
+          <line>542</line>
+          <option name="timeStamp" value="16" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

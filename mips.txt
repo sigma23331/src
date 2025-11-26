@@ -1,0 +1,891 @@
+.data:
+_str_0: .asciiz "error: n = "
+_str_1: .asciiz " < 0\n"
+_str_2: .asciiz "meow~ meow~\n"
+_str_3: .asciiz "23371015\n"
+_str_4: .asciiz "\n"
+_str_5: .asciiz "   "
+_str_6: .asciiz "x\n"
+_str_7: .asciiz "test finished!\n"
+g_default: .word 0
+g_var: .word 20
+G_CON1: .word 203
+G_CON2: .word 1
+G_CON3: .word 2
+G_CON4: .word 3
+G_CON_ARR: .word 4, 3, 2, 1
+g_arr: .word 2, 3, 0, 0, 0, 0, 0, 0, 0, 0
+map_map_cnt0: .word 0
+
+.text:
+main:
+main_entry0:
+    addiu $k0, $sp, -364
+    sw $k0, -4($sp)
+    addiu $k0, $sp, -368
+    sw $k0, -8($sp)
+    addiu $k0, $sp, -372
+    sw $k0, -12($sp)
+    addiu $k0, $sp, -392
+    sw $k0, -16($sp)
+    addiu $k0, $sp, -396
+    sw $k0, -20($sp)
+    addiu $k0, $sp, -400
+    sw $k0, -24($sp)
+    addiu $k0, $sp, -404
+    sw $k0, -28($sp)
+    addiu $k0, $sp, -408
+    sw $k0, -32($sp)
+    addiu $k0, $sp, -412
+    sw $k0, -36($sp)
+    la $k0, _str_3
+    sw $k0, -40($sp)
+    lw $a0, -40($sp)
+    li $v0, 4
+    syscall
+    lw $k0, -12($sp)
+    li $k1, 6
+    sw $k1, 0($k0)
+    li $v0, 5
+    syscall
+    sw $v0, -44($sp)
+    lw $k0, -20($sp)
+    sw $k0, -48($sp)
+    lw $k0, -48($sp)
+    lw $k1, -44($sp)
+    sw $k1, 0($k0)
+    lw $k0, -16($sp)
+    sw $k0, -52($sp)
+    sw $ra, -416($sp)
+    lw $a0, -52($sp)
+    li $a1, 3
+    addiu $sp, $sp, -416
+    jal getArr
+    addiu $sp, $sp, 416
+    lw $ra, -416($sp)
+    lw $k0, -16($sp)
+    sw $k0, -56($sp)
+    lw $k0, -20($sp)
+    sw $k0, -60($sp)
+    sw $ra, -416($sp)
+    lw $a0, -56($sp)
+    lw $a1, -60($sp)
+    addiu $sp, $sp, -416
+    jal swap0
+    addiu $sp, $sp, 416
+    lw $ra, -416($sp)
+    sw $ra, -416($sp)
+    addiu $sp, $sp, -416
+    jal meow
+    addiu $sp, $sp, 416
+    lw $ra, -416($sp)
+    li $k0, -1
+    sw $k0, -64($sp)
+    lw $k0, -4($sp)
+    lw $k1, -64($sp)
+    sw $k1, 0($k0)
+    lw $k0, -4($sp)
+    lw $k1, 0($k0)
+    sw $k1, -68($sp)
+    sw $ra, -416($sp)
+    lw $a0, -68($sp)
+    addiu $sp, $sp, -416
+    jal factorial
+    addiu $sp, $sp, 416
+    lw $ra, -416($sp)
+    move $k0, $v0
+    sw $k0, -72($sp)
+    lw $k0, -8($sp)
+    lw $k1, -72($sp)
+    sw $k1, 0($k0)
+    lw $k0, -12($sp)
+    lw $k1, 0($k0)
+    sw $k1, -76($sp)
+    sw $ra, -416($sp)
+    lw $a0, -76($sp)
+    addiu $sp, $sp, -416
+    jal factorial
+    addiu $sp, $sp, 416
+    lw $ra, -416($sp)
+    move $k0, $v0
+    sw $k0, -80($sp)
+    sw $ra, -416($sp)
+    lw $a0, -80($sp)
+    addiu $sp, $sp, -416
+    jal map
+    addiu $sp, $sp, 416
+    lw $ra, -416($sp)
+    move $k0, $v0
+    sw $k0, -84($sp)
+    lw $a0, -84($sp)
+    li $v0, 1
+    syscall
+    la $k0, _str_4
+    sw $k0, -88($sp)
+    lw $a0, -88($sp)
+    li $v0, 4
+    syscall
+    lw $k0, -16($sp)
+    sw $k0, -92($sp)
+    lw $k0, -92($sp)
+    lw $k1, 0($k0)
+    sw $k1, -96($sp)
+    sw $ra, -416($sp)
+    lw $a0, -96($sp)
+    addiu $sp, $sp, -416
+    jal map
+    addiu $sp, $sp, 416
+    lw $ra, -416($sp)
+    move $k0, $v0
+    sw $k0, -100($sp)
+    la $k0, _str_5
+    sw $k0, -104($sp)
+    lw $a0, -104($sp)
+    li $v0, 4
+    syscall
+    lw $a0, -100($sp)
+    li $v0, 1
+    syscall
+    la $k0, _str_6
+    sw $k0, -108($sp)
+    lw $a0, -108($sp)
+    li $v0, 4
+    syscall
+    lw $k0, -16($sp)
+    sw $k0, -112($sp)
+    la $k0, g_arr
+    sw $k0, -116($sp)
+    sw $ra, -416($sp)
+    lw $a0, -112($sp)
+    lw $a1, -116($sp)
+    li $a2, 5
+    addiu $sp, $sp, -416
+    jal copyEven
+    addiu $sp, $sp, 416
+    lw $ra, -416($sp)
+    move $k0, $v0
+    sw $k0, -120($sp)
+    sw $ra, -416($sp)
+    lw $a0, -120($sp)
+    addiu $sp, $sp, -416
+    jal map
+    addiu $sp, $sp, 416
+    lw $ra, -416($sp)
+    move $k0, $v0
+    sw $k0, -124($sp)
+    lw $a0, -124($sp)
+    li $v0, 1
+    syscall
+    la $k0, _str_4
+    sw $k0, -128($sp)
+    lw $a0, -128($sp)
+    li $v0, 4
+    syscall
+    lw $k0, -24($sp)
+    li $k1, 0
+    sw $k1, 0($k0)
+    j main_for_cond1
+
+main_for_cond1:
+    lw $k0, -24($sp)
+    lw $k1, 0($k0)
+    sw $k1, -132($sp)
+    lw $k0, -132($sp)
+    blt $k0, 1, main_for_body2
+    j main_for_follow4
+
+main_for_body2:
+    lw $k0, -24($sp)
+    lw $k1, 0($k0)
+    sw $k1, -140($sp)
+    lw $a0, -140($sp)
+    li $v0, 1
+    syscall
+    la $k0, _str_4
+    sw $k0, -144($sp)
+    lw $a0, -144($sp)
+    li $v0, 4
+    syscall
+    j main_for_update3
+
+main_for_update3:
+    lw $k0, -24($sp)
+    lw $k1, 0($k0)
+    sw $k1, -148($sp)
+    lw $k0, -148($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -152($sp)
+    lw $k0, -24($sp)
+    lw $k1, -152($sp)
+    sw $k1, 0($k0)
+    j main_for_cond1
+
+main_for_follow4:
+    li $k0, -2
+    sw $k0, -156($sp)
+    lw $k0, -156($sp)
+    li $k1, 0
+    subu $k0, $k1, $k0
+    sw $k0, -160($sp)
+    lw $k0, -160($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -164($sp)
+    lw $k0, -164($sp)
+    addiu $k0, $k0, -3
+    sw $k0, -168($sp)
+    lw $k0, -28($sp)
+    lw $k1, -168($sp)
+    sw $k1, 0($k0)
+    lw $k0, -32($sp)
+    li $k1, 0
+    sw $k1, 0($k0)
+    lw $k0, -36($sp)
+    li $k1, 1
+    sw $k1, 0($k0)
+    j main_for_cond5
+
+main_for_cond5:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -172($sp)
+    lw $k0, -172($sp)
+    blt $k0, 2, main_for_body6
+    j main_for_follow8
+
+main_for_body6:
+    lw $k0, -28($sp)
+    lw $k1, 0($k0)
+    sw $k1, -180($sp)
+    lw $k0, -180($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -184($sp)
+    lw $k0, -28($sp)
+    lw $k1, -184($sp)
+    sw $k1, 0($k0)
+    j main_for_update7
+
+main_for_update7:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -188($sp)
+    lw $k0, -188($sp)
+    addiu $k0, $k0, 2
+    sw $k0, -192($sp)
+    lw $k0, -32($sp)
+    lw $k1, -192($sp)
+    sw $k1, 0($k0)
+    j main_for_cond5
+
+main_for_follow8:
+    lw $k0, -32($sp)
+    li $k1, 0
+    sw $k1, 0($k0)
+    lw $k0, -36($sp)
+    li $k1, 1
+    sw $k1, 0($k0)
+    j main_for_cond9
+
+main_for_cond9:
+    j main_for_body10
+
+main_for_body10:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -196($sp)
+    lw $k0, -196($sp)
+    bge $k0, 5, main_if_then13
+    j main_if_else15
+
+main_for_update11:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -204($sp)
+    lw $k0, -204($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -208($sp)
+    lw $k0, -32($sp)
+    lw $k1, -208($sp)
+    sw $k1, 0($k0)
+    j main_for_cond9
+
+main_for_follow12:
+    lw $k0, -32($sp)
+    li $k1, 0
+    sw $k1, 0($k0)
+    j main_for_cond19
+
+main_if_then13:
+    j main_for_follow12
+
+main_if_follow14:
+    j main_for_update11
+
+main_if_else15:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -212($sp)
+    lw $k0, -212($sp)
+    beq $k0, 2, main_if_then16
+    j main_if_else18
+
+main_if_then16:
+    j main_for_update11
+
+main_if_follow17:
+    j main_if_follow14
+
+main_if_else18:
+    lw $k0, -28($sp)
+    lw $k1, 0($k0)
+    sw $k1, -220($sp)
+    lw $k0, -220($sp)
+    addiu $k0, $k0, 2
+    sw $k0, -224($sp)
+    lw $k0, -28($sp)
+    lw $k1, -224($sp)
+    sw $k1, 0($k0)
+    j main_if_follow17
+
+main_for_cond19:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -228($sp)
+    lw $k0, -228($sp)
+    blt $k0, 3, main_for_body20
+    j main_for_follow22
+
+main_for_body20:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -236($sp)
+    lw $k0, -236($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -240($sp)
+    lw $k0, -32($sp)
+    lw $k1, -240($sp)
+    sw $k1, 0($k0)
+    lw $k0, -28($sp)
+    lw $k1, 0($k0)
+    sw $k1, -244($sp)
+    lw $k0, -244($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -248($sp)
+    lw $k0, -28($sp)
+    lw $k1, -248($sp)
+    sw $k1, 0($k0)
+    j main_for_update21
+
+main_for_update21:
+    j main_for_cond19
+
+main_for_follow22:
+    lw $k0, -32($sp)
+    li $k1, 0
+    sw $k1, 0($k0)
+    j main_for_cond23
+
+main_for_cond23:
+    j main_for_body24
+
+main_for_body24:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -252($sp)
+    lw $k0, -252($sp)
+    bge $k0, 2, main_if_then27
+    j main_if_follow28
+
+main_for_update25:
+    j main_for_cond23
+
+main_for_follow26:
+    j main_for_cond29
+
+main_if_then27:
+    j main_for_follow26
+
+main_if_follow28:
+    lw $k0, -28($sp)
+    lw $k1, 0($k0)
+    sw $k1, -260($sp)
+    lw $k0, -260($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -264($sp)
+    lw $k0, -28($sp)
+    lw $k1, -264($sp)
+    sw $k1, 0($k0)
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -268($sp)
+    lw $k0, -268($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -272($sp)
+    lw $k0, -32($sp)
+    lw $k1, -272($sp)
+    sw $k1, 0($k0)
+    j main_for_update25
+
+main_for_cond29:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -276($sp)
+    lw $k0, -276($sp)
+    ble $k0, 1, main_for_body30
+    j main_for_follow32
+
+main_for_body30:
+    lw $k0, -28($sp)
+    lw $k1, 0($k0)
+    sw $k1, -284($sp)
+    lw $k0, -284($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -288($sp)
+    lw $k0, -28($sp)
+    lw $k1, -288($sp)
+    sw $k1, 0($k0)
+    j main_for_update31
+
+main_for_update31:
+    j main_for_cond29
+
+main_for_follow32:
+    j main_for_cond33
+
+main_for_cond33:
+    j main_for_body34
+
+main_for_body34:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -292($sp)
+    lw $k0, -292($sp)
+    bge $k0, 5, main_if_then37
+    j main_if_follow38
+
+main_for_update35:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -300($sp)
+    lw $k0, -300($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -304($sp)
+    lw $k0, -32($sp)
+    lw $k1, -304($sp)
+    sw $k1, 0($k0)
+    j main_for_cond33
+
+main_for_follow36:
+    lw $k0, -32($sp)
+    li $k1, 0
+    sw $k1, 0($k0)
+    j main_for_cond39
+
+main_if_then37:
+    j main_for_follow36
+
+main_if_follow38:
+    lw $k0, -28($sp)
+    lw $k1, 0($k0)
+    sw $k1, -308($sp)
+    lw $k0, -308($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -312($sp)
+    lw $k0, -28($sp)
+    lw $k1, -312($sp)
+    sw $k1, 0($k0)
+    j main_for_update35
+
+main_for_cond39:
+    j main_for_body40
+
+main_for_body40:
+    lw $k0, -28($sp)
+    lw $k1, 0($k0)
+    sw $k1, -316($sp)
+    lw $k0, -316($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -320($sp)
+    lw $k0, -28($sp)
+    lw $k1, -320($sp)
+    sw $k1, 0($k0)
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -324($sp)
+    lw $k0, -324($sp)
+    bgt $k0, 10, main_if_then43
+    j main_if_follow44
+
+main_for_update41:
+    j main_for_cond39
+
+main_for_follow42:
+    lw $k0, -28($sp)
+    lw $k1, 0($k0)
+    sw $k1, -332($sp)
+    sw $ra, -416($sp)
+    lw $a0, -332($sp)
+    addiu $sp, $sp, -416
+    jal map
+    addiu $sp, $sp, 416
+    lw $ra, -416($sp)
+    move $k0, $v0
+    sw $k0, -336($sp)
+    lw $a0, -336($sp)
+    li $v0, 1
+    syscall
+    la $k0, _str_4
+    sw $k0, -340($sp)
+    lw $a0, -340($sp)
+    li $v0, 4
+    syscall
+    la $k0, g_default
+    lw $k1, 0($k0)
+    sw $k1, -344($sp)
+    lw $a0, -344($sp)
+    li $v0, 1
+    syscall
+    la $k0, _str_4
+    sw $k0, -348($sp)
+    lw $a0, -348($sp)
+    li $v0, 4
+    syscall
+    la $k0, _str_7
+    sw $k0, -352($sp)
+    lw $a0, -352($sp)
+    li $v0, 4
+    syscall
+    li $v0, 10
+    syscall
+
+main_if_then43:
+    j main_for_follow42
+
+main_if_follow44:
+    lw $k0, -32($sp)
+    lw $k1, 0($k0)
+    sw $k1, -356($sp)
+    lw $k0, -356($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -360($sp)
+    lw $k0, -32($sp)
+    lw $k1, -360($sp)
+    sw $k1, 0($k0)
+    j main_for_update41
+
+factorial:
+factorial_entry0:
+    addiu $k0, $sp, -60
+    sw $k0, -8($sp)
+    lw $k0, -8($sp)
+    sw $a0, 0($k0)
+    lw $k0, -8($sp)
+    lw $k1, 0($k0)
+    sw $k1, -12($sp)
+    lw $k0, -12($sp)
+    blt $k0, 0, factorial_if_then1
+    j factorial_if_follow2
+
+factorial_if_then1:
+    lw $k0, -8($sp)
+    lw $k1, 0($k0)
+    sw $k1, -20($sp)
+    la $k0, _str_0
+    sw $k0, -24($sp)
+    lw $a0, -24($sp)
+    li $v0, 4
+    syscall
+    lw $a0, -20($sp)
+    li $v0, 1
+    syscall
+    la $k0, _str_1
+    sw $k0, -28($sp)
+    lw $a0, -28($sp)
+    li $v0, 4
+    syscall
+    li $v0, 0
+    jr $ra
+
+factorial_if_follow2:
+    lw $k0, -8($sp)
+    lw $k1, 0($k0)
+    sw $k1, -32($sp)
+    lw $k0, -32($sp)
+    beq $k0, 0, factorial_if_then3
+    j factorial_if_follow4
+
+factorial_if_then3:
+    li $v0, 1
+    jr $ra
+
+factorial_if_follow4:
+    lw $k0, -8($sp)
+    lw $k1, 0($k0)
+    sw $k1, -40($sp)
+    lw $k0, -8($sp)
+    lw $k1, 0($k0)
+    sw $k1, -44($sp)
+    lw $k0, -44($sp)
+    addiu $k0, $k0, -1
+    sw $k0, -48($sp)
+    sw $ra, -64($sp)
+    lw $a0, -48($sp)
+    addiu $sp, $sp, -64
+    jal factorial
+    addiu $sp, $sp, 64
+    lw $ra, -64($sp)
+    move $k0, $v0
+    sw $k0, -52($sp)
+    lw $k0, -40($sp)
+    lw $k1, -52($sp)
+    mul $k0, $k0, $k1
+    sw $k0, -56($sp)
+    lw $v0, -56($sp)
+    jr $ra
+
+swap0:
+swap0_entry0:
+    addiu $k0, $sp, -44
+    sw $k0, -12($sp)
+    move $k0, $a0
+    sw $k0, -16($sp)
+    lw $k0, -16($sp)
+    lw $k1, 0($k0)
+    sw $k1, -20($sp)
+    lw $k0, -12($sp)
+    lw $k1, -20($sp)
+    sw $k1, 0($k0)
+    move $k0, $a1
+    sw $k0, -24($sp)
+    lw $k0, -24($sp)
+    lw $k1, 0($k0)
+    sw $k1, -28($sp)
+    move $k0, $a0
+    sw $k0, -32($sp)
+    lw $k0, -32($sp)
+    lw $k1, -28($sp)
+    sw $k1, 0($k0)
+    lw $k0, -12($sp)
+    lw $k1, 0($k0)
+    sw $k1, -36($sp)
+    move $k0, $a1
+    sw $k0, -40($sp)
+    lw $k0, -40($sp)
+    lw $k1, -36($sp)
+    sw $k1, 0($k0)
+    jr $ra
+
+copyEven:
+copyEven_entry0:
+    addiu $k0, $sp, -100
+    sw $k0, -16($sp)
+    addiu $k0, $sp, -104
+    sw $k0, -20($sp)
+    addiu $k0, $sp, -108
+    sw $k0, -24($sp)
+    lw $k0, -16($sp)
+    sw $a2, 0($k0)
+    lw $k0, -20($sp)
+    li $k1, 0
+    sw $k1, 0($k0)
+    lw $k0, -24($sp)
+    li $k1, 0
+    sw $k1, 0($k0)
+    lw $k0, -24($sp)
+    li $k1, 0
+    sw $k1, 0($k0)
+    j copyEven_for_cond1
+
+copyEven_for_cond1:
+    lw $k0, -24($sp)
+    lw $k1, 0($k0)
+    sw $k1, -28($sp)
+    lw $k0, -16($sp)
+    lw $k1, 0($k0)
+    sw $k1, -32($sp)
+    lw $k0, -28($sp)
+    lw $k1, -32($sp)
+    blt $k0, $k1, copyEven_for_body2
+    j copyEven_for_follow4
+
+copyEven_for_body2:
+    lw $k0, -24($sp)
+    lw $k1, 0($k0)
+    sw $k1, -40($sp)
+    move $k0, $a1
+    lw $k1, -40($sp)
+    sll $gp, $k1, 2
+    addu $k0, $k0, $gp
+    sw $k0, -44($sp)
+    lw $k0, -44($sp)
+    lw $k1, 0($k0)
+    sw $k1, -48($sp)
+    lw $k0, -48($sp)
+    li $k1, 2
+    div $k0, $k1
+    mfhi $k0
+    sw $k0, -52($sp)
+    lw $k0, -52($sp)
+    beq $k0, 0, copyEven_if_then5
+    j copyEven_if_follow6
+
+copyEven_for_update3:
+    lw $k0, -24($sp)
+    lw $k1, 0($k0)
+    sw $k1, -60($sp)
+    lw $k0, -60($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -64($sp)
+    lw $k0, -24($sp)
+    lw $k1, -64($sp)
+    sw $k1, 0($k0)
+    j copyEven_for_cond1
+
+copyEven_for_follow4:
+    lw $k0, -20($sp)
+    lw $k1, 0($k0)
+    sw $k1, -68($sp)
+    lw $v0, -68($sp)
+    jr $ra
+
+copyEven_if_then5:
+    lw $k0, -24($sp)
+    lw $k1, 0($k0)
+    sw $k1, -72($sp)
+    move $k0, $a1
+    lw $k1, -72($sp)
+    sll $gp, $k1, 2
+    addu $k0, $k0, $gp
+    sw $k0, -76($sp)
+    lw $k0, -76($sp)
+    lw $k1, 0($k0)
+    sw $k1, -80($sp)
+    lw $k0, -24($sp)
+    lw $k1, 0($k0)
+    sw $k1, -84($sp)
+    move $k0, $a0
+    lw $k1, -84($sp)
+    sll $gp, $k1, 2
+    addu $k0, $k0, $gp
+    sw $k0, -88($sp)
+    lw $k0, -88($sp)
+    lw $k1, -80($sp)
+    sw $k1, 0($k0)
+    lw $k0, -20($sp)
+    lw $k1, 0($k0)
+    sw $k1, -92($sp)
+    lw $k0, -92($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -96($sp)
+    lw $k0, -20($sp)
+    lw $k1, -96($sp)
+    sw $k1, 0($k0)
+    j copyEven_if_follow6
+
+copyEven_if_follow6:
+    j copyEven_for_update3
+
+map:
+map_entry0:
+    addiu $k0, $sp, -44
+    sw $k0, -8($sp)
+    lw $k0, -8($sp)
+    sw $a0, 0($k0)
+    la $k0, map_map_cnt0
+    lw $k1, 0($k0)
+    sw $k1, -12($sp)
+    lw $k0, -12($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -16($sp)
+    la $k0, map_map_cnt0
+    lw $k1, -16($sp)
+    sw $k1, 0($k0)
+    lw $k0, -8($sp)
+    lw $k1, 0($k0)
+    sw $k1, -20($sp)
+    lw $k0, -20($sp)
+    addiu $k0, $k0, 31
+    sw $k0, -24($sp)
+    la $k0, map_map_cnt0
+    lw $k1, 0($k0)
+    sw $k1, -28($sp)
+    lw $k0, -24($sp)
+    lw $k1, -28($sp)
+    addu $k0, $k0, $k1
+    sw $k0, -32($sp)
+    lw $k0, -32($sp)
+    sll $v0, $k0, 2
+    addu $k0, $v0, $k0
+    sw $k0, -36($sp)
+    lw $k0, -36($sp)
+    li $k1, 17
+    div $k0, $k1
+    mfhi $k0
+    sw $k0, -40($sp)
+    lw $v0, -40($sp)
+    jr $ra
+
+meow:
+meow_entry0:
+    la $k0, _str_2
+    sw $k0, -4($sp)
+    lw $a0, -4($sp)
+    li $v0, 4
+    syscall
+    jr $ra
+
+getArr:
+getArr_entry0:
+    addiu $k0, $sp, -52
+    sw $k0, -12($sp)
+    addiu $k0, $sp, -56
+    sw $k0, -16($sp)
+    lw $k0, -12($sp)
+    sw $a1, 0($k0)
+    lw $k0, -16($sp)
+    li $k1, 0
+    sw $k1, 0($k0)
+    j getArr_for_cond1
+
+getArr_for_cond1:
+    lw $k0, -16($sp)
+    lw $k1, 0($k0)
+    sw $k1, -20($sp)
+    lw $k0, -12($sp)
+    lw $k1, 0($k0)
+    sw $k1, -24($sp)
+    lw $k0, -20($sp)
+    lw $k1, -24($sp)
+    blt $k0, $k1, getArr_for_body2
+    j getArr_for_follow4
+
+getArr_for_body2:
+    li $v0, 5
+    syscall
+    sw $v0, -32($sp)
+    lw $k0, -16($sp)
+    lw $k1, 0($k0)
+    sw $k1, -36($sp)
+    move $k0, $a0
+    lw $k1, -36($sp)
+    sll $gp, $k1, 2
+    addu $k0, $k0, $gp
+    sw $k0, -40($sp)
+    lw $k0, -40($sp)
+    lw $k1, -32($sp)
+    sw $k1, 0($k0)
+    j getArr_for_update3
+
+getArr_for_update3:
+    lw $k0, -16($sp)
+    lw $k1, 0($k0)
+    sw $k1, -44($sp)
+    lw $k0, -44($sp)
+    addiu $k0, $k0, 1
+    sw $k0, -48($sp)
+    lw $k0, -16($sp)
+    lw $k1, -48($sp)
+    sw $k1, 0($k0)
+    j getArr_for_cond1
+
+getArr_for_follow4:
+    jr $ra

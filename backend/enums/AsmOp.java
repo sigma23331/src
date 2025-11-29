@@ -59,7 +59,9 @@ public enum AsmOp {
     MOVE,
     // 内存指令
     LW,
+    LB,
     SW,
+    SB,
     SYSCALL;
 
     @Override

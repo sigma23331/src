@@ -107,13 +107,16 @@ public class MipsBuilder {
 
     // 4. 实现主构建流程
     public void build(boolean optimize) {
-        // 4.1 遍历 module.getConstStrings()，调用 buildConstString
-        for (ConstString constString : module.getConstStrings()) {
-            buildConstString(constString);
-        }
-        // 4.2 遍历 module.getGlobalVars()，调用 buildGlobalVar
+        // 【修改点】：先处理 GlobalVar (int/array)，确保它们从数据段首地址(对齐)开始存放
+        // 4.1 遍历 module.getGlobalVars()，调用 buildGlobalVar
         for (GlobalVar globalVar : module.getGlobalVars()) {
             buildGlobalVar(globalVar);
+        }
+
+        // 【修改点】：后处理 ConstString，字符串不需要对齐，放在后面没问题
+        // 4.2 遍历 module.getConstStrings()，调用 buildConstString
+        for (ConstString constString : module.getConstStrings()) {
+            buildConstString(constString);
         }
         // 4.3 标记 isInMain = true
         // 遍历 functions，找到名为 "@main" 的函数进行 buildFunction，然后 break
@@ -162,38 +165,40 @@ public class MipsBuilder {
 
     // 6. 实现全局变量生成
     private void buildGlobalVar(GlobalVar globalVar) {
-        // 逻辑：判断是 int 还是 array
         Type targetType = ((PointerType) globalVar.getType()).getPointeeType();
+        // 使用 helper 方法统一处理名字
+        String labelName = parseLabel(globalVar.getName());
 
         if (targetType instanceof IntegerType) {
-            // 检查 getInitialValue().getElements() 是否为空
-            if (globalVar.getInitializer() == null) {
-                String labelName = globalVar.getName()
-                        .replace("@", "")
-                        .replace(".", "_");
-                new Word(labelName,0);
+            int initVal = 0;
+            if (globalVar.getInitializer() != null) {
+                initVal = ((ConstInt) globalVar.getInitializer()).getValue();
             }
-            // 为空则初始值为 0，否则取第一个元素
-            else {
-                int initVal = ((ConstInt)globalVar.getInitializer()).getValue();
-                String labelName = globalVar.getName()
-                        .replace("@", "")
-                        .replace(".", "_");
-                new Word(labelName,initVal);
-            }
+            new Word(labelName, initVal);
         } else if (targetType instanceof ArrayType) {
-            // 获取元素列表和长度
-            ArrayList<Constant> elements = ((ConstArray)globalVar.getInitializer()).getElements();
+            ArrayType arrayType = (ArrayType) targetType;
+            // 【关键修复】使用数组声明的总长度，而不是初始化列表的长度
+            int totalLength = arrayType.getNumElements();
+
             ArrayList<Integer> integerArrayList = new ArrayList<>();
-            for (Constant element : elements) {
-                integerArrayList.add(((ConstInt)element).getValue());
+
+            // 获取初始化值
+            if (globalVar.getInitializer() instanceof ConstArray) {
+                ArrayList<Constant> elements = ((ConstArray) globalVar.getInitializer()).getElements();
+                for (Constant element : elements) {
+                    integerArrayList.add(((ConstInt) element).getValue());
+                }
+            } else if (globalVar.getInitializer() instanceof ConstInt) {
+                // 某些极其特殊情况，虽然不太可能出现在数组里
+                integerArrayList.add(((ConstInt)globalVar.getInitializer()).getValue());
             }
-            int length = elements.size();
-            String labelName = globalVar.getName()
-                    .replace("@", "")
-                    .replace(".", "_");
-            new Word(labelName, integerArrayList,length);
-            // new Word(...)
+
+            // 【关键修复】用 0 填充剩余空间，防止 .data 段越界
+            while (integerArrayList.size() < totalLength) {
+                integerArrayList.add(0);
+            }
+
+            new Word(labelName, integerArrayList, totalLength);
         } else {
             throw new RuntimeException("Unknown global variable type");
         }
@@ -212,9 +217,7 @@ public class MipsBuilder {
         new Label(parseLabel(function.getName()));
 
         // 7.3 处理函数参数
-        // MIPS 标准：前 4 个参数在寄存器 $a0-$a3，剩下的在栈上
         ArrayList<FuncParam> funcParams = function.getParams();
-        // 计算栈上参数的总数
         int totalStackArgs = Math.max(0, funcParams.size() - 4);
 
         for (int i = 0; i < funcParams.size(); i++) {
@@ -224,22 +227,24 @@ public class MipsBuilder {
                 // 前 4 个参数：分配到寄存器，同时也预留栈空间
                 curStackOffset -= 4;
                 var2Offset.put(arg, curStackOffset);
-                var2reg.put(arg, Register.getByOffset(Register.A0, i));
+
+                // 【核心修改 A】：获取当前参数所在的物理寄存器
+                Register argReg = Register.getByOffset(Register.A0, i);
+
+                // 【核心修改 B】：必须生成指令，把 $a0-$a3 的值存入栈中永久保存！
+                new MemAsm(AsmOp.SW, argReg, Register.SP, curStackOffset);
+
+                // 【核心修改 C - 极为重要】：
+                // 绝对不要把 arg 放入 var2reg！
+                // 删除这行 -> var2reg.put(arg, argReg);
+                // 让编译器以后每次使用 arg 时，都强制去栈里(lw)取值。
+                // 虽然慢一点，但绝对安全，不会被 putint/$a0 污染。
+
             } else {
-                // 【关键修正】栈上参数 (第 5 个及以后)
-                // 这里的内存布局是：[Arg N] [Arg N-1] ... [Arg 5] [RA]
-                // SP 指向 Arg N (0($sp))
-                // 所以 Arg i 的偏移量应该是：(总栈参数个数 - 1 - (当前是第几个栈参数)) * 4
-
-                int stackArgIndex = i - 4; // 第 5 个参数 index 为 0
+                // 栈上参数处理保持不变
+                int stackArgIndex = i - 4;
                 int stackArgOffset = (totalStackArgs - 1 - stackArgIndex) * 4;
-
                 var2Offset.put(arg, stackArgOffset);
-
-                // 举例验证：假设共有 6 个参数 (Arg0-Arg5)。栈参数有 2 个 (Arg4, Arg5)。
-                // totalStackArgs = 2.
-                // i=4 (Arg4): index=0. offset = (2-1-0)*4 = 4. -> 对应 4($sp) -> 正确 (高地址)
-                // i=5 (Arg5): index=1. offset = (2-1-1)*4 = 0. -> 对应 0($sp) -> 正确 (低地址/栈底)
             }
         }
 
@@ -315,41 +320,27 @@ public class MipsBuilder {
     // ----------------------------------------------------
 
     private void buildAllocInst(AllocInst allocInst) {
-        // 1. 获取要分配的目标类型
         Type targetType = ((PointerType) allocInst.getType()).getPointeeType();
 
-        // 2. 计算需要分配的字节数
-        int sizeBytes = 4;
+        int sizeBytes = 4; // 默认分配 4 字节
         if (targetType instanceof ArrayType) {
-            // 例子：int arr[10]; -> alloca [10 x i32]
-            // 大小 = 10 * 4 = 40 字节
+            // 【关键修复】无论元素是 i32 还是 i8，都强制按 4 字节分配
+            // 这样能保证栈始终 4 字节对齐，且配合 GEP 的 *4 逻辑
             sizeBytes = 4 * ((ArrayType) targetType).getNumElements();
         }
 
-        // 3. 在栈上“挖”出空间
-        // 例子：假设之前 curStackOffset 是 -4，现在分配 40 字节，变为 -44
+        // 在栈上分配空间
         curStackOffset -= sizeBytes;
 
-        // 4. 计算新空间的地址，并存入 AllocInst 变量中
-        // 目标：我们要把这个新挖出来的空间的地址算出来。
-
-        // 4.1 确定存放结果的目标寄存器
-        // 例子：假设分配器给 %1 (allocInst) 分配了 $t0
+        // 获取 AllocInst 对应的寄存器（或临时寄存器 K0）
         Register destReg = var2reg.getOrDefault(allocInst, Register.K0);
 
-        // 4.2 生成地址计算指令
-        // MIPS: addiu $t0, $sp, -44
-        // 此时 $t0 里存的就是数组 arr 的首地址
+        // 计算地址: destReg = $sp + curStackOffset
         new CalcAsm(destReg, AsmOp.ADDIU, Register.SP, curStackOffset);
 
-        // 4.3 如果 allocInst 没被分配寄存器 (溢出情况)
+        // 如果 AllocInst 溢出到栈上，将计算出的地址存回栈槽
         if (!var2reg.containsKey(allocInst)) {
-            // 例子：allocInst 这个“指针变量”本身也被挤到了栈上，位置是 -8($sp)
-            // 我们刚算出来的数组地址在 $k0 中
             int allocInstOffset = var2Offset.get(allocInst);
-
-            // MIPS: sw $k0, -8($sp)
-            // 含义：把“数组的地址”存到“指针变量的栈槽”里
             new MemAsm(AsmOp.SW, Register.K0, Register.SP, allocInstOffset);
         }
     }
@@ -1009,36 +1000,40 @@ public class MipsBuilder {
     }
 
     private void buildCallInst(CallInst callInst) {
-        // 1. 保存 $ra (返回地址)
-        // 为什么要保存？因为 jal 会修改 $ra，如果不存，等会儿就回不去上一层函数了。
-        // 我们把它存在当前栈顶的再下一个位置 (curStackOffset - 4)
-        int raOffset = curStackOffset - 4;
+        // 1. 【关键修复】确定需要保存的寄存器 (Caller-Saved)
+        // 策略：保存所有 var2reg 中已分配且会被 callee 破坏的寄存器
+        ArrayList<Register> savedRegs = new ArrayList<>();
+        for (Register reg : var2reg.values()) {
+            // 排除特殊寄存器，保存通用寄存器 (T0-T9, A0-A3, V0-V1 等)
+            if (reg != Register.SP && reg != Register.RA && reg != Register.ZERO
+                    && reg != Register.K0 && reg != Register.K1 && reg != Register.GP) {
+                if (!savedRegs.contains(reg)) {
+                    savedRegs.add(reg);
+                }
+            }
+        }
+
+        // 2. 保存这些寄存器到栈上
+        for (Register reg : savedRegs) {
+            curStackOffset -= 4;
+            new MemAsm(AsmOp.SW, reg, Register.SP, curStackOffset);
+        }
+
+        // 3. 保存 $ra
+        curStackOffset -= 4;
+        int raOffset = curStackOffset;
         new MemAsm(AsmOp.SW, Register.RA, Register.SP, raOffset);
 
-        // 2. 准备参数
-        // 获取被调用函数的参数列表（注意：是实参，即 CallInst 的操作数）
-        // CallInst 的第 0 个操作数通常是 Function 指针，实参从第 1 个开始 (根据你的 IR 结构确认)
-        // 假设：operand 0 是函数，operand 1~N 是参数
-
-        Function targetFunc = (Function) callInst.getOperand(0); // 获取目标函数
-        // 实参列表（排除掉第一个操作数）
+        // 4. 准备参数
+        Function targetFunc = (Function) callInst.getOperand(0);
         int argCount = callInst.getNumOperands() - 1;
 
-        // 我们需要计算新栈帧的大小。
-        // 除了 $ra (4字节)，如果有超过4个参数，多出的参数也要占栈空间。
-        // 这里我们简单粗暴：新栈帧大小 = 当前偏移 + RA空间 + 参数空间
-        // 但为了符合 buildFunction 的逻辑，我们在 buildFunction 里并没有移动 SP，
-        // 所以这里我们需要暂时手动移动 SP。
-
-        // --- 步骤 2.1: 填参数 ---
         for (int i = 0; i < argCount; i++) {
-            Value arg = callInst.getOperand(i + 1); // 实参值
+            Value arg = callInst.getOperand(i + 1);
 
             if (i < 4) {
-                // 前 4 个参数 -> 寄存器 $a0 - $a3
+                // 前 4 个参数 -> 寄存器
                 Register argReg = Register.getByOffset(Register.A0, i);
-
-                // 将实参的值加载到 argReg
                 if (arg instanceof ConstInt) {
                     new LiAsm(argReg, ((ConstInt) arg).getValue());
                 } else if (var2reg.containsKey(arg)) {
@@ -1047,15 +1042,10 @@ public class MipsBuilder {
                     new MemAsm(AsmOp.LW, argReg, Register.SP, var2Offset.get(arg));
                 }
             } else {
-                // 超过 4 个参数 -> 存入栈 (参数区)
-                // 这些参数应该放在新栈帧的顶部，或者旧栈帧的底部。
-                // 简单约定：第 5 个参数放在 -8($sp) (因为 -4 是 $ra), 第 6 个放在 -12...
-                // 注意：这是相对于“调用前”的 $sp 的偏移
-
+                // 栈参数：存放在 RA 下方
                 int paramOffset = raOffset - 4 * (i - 4 + 1);
-
-                // 先把参数 load 到临时寄存器 $k0
                 Register temp = Register.K0;
+
                 if (arg instanceof ConstInt) {
                     new LiAsm(temp, ((ConstInt) arg).getValue());
                 } else if (var2reg.containsKey(arg)) {
@@ -1063,46 +1053,40 @@ public class MipsBuilder {
                 } else {
                     new MemAsm(AsmOp.LW, temp, Register.SP, var2Offset.get(arg));
                 }
-
-                // 再 store 到栈上指定位置
                 new MemAsm(AsmOp.SW, temp, Register.SP, paramOffset);
             }
         }
 
-        // 3. 调整栈指针 ($sp) 并跳转
-        // 我们刚才计算的最深偏移是：raOffset (存$ra) 或者是 最后一个参数的位置
-        // 实际上，为了安全，我们可以直接让 $sp 下降到 (curStackOffset - 4 - 额外参数空间)
-        // 或者更简单：直接下降当前函数已用的所有栈空间 + 额外空间。
-
-        // 此时 curStackOffset 已经是负数，表示当前函数的局部变量用到哪了。
-        // 我们在这个基础上，再给 $ra 和 溢出参数 留空间。
+        // 5. 调整栈指针 ($sp) 并跳转
         int extraArgs = Math.max(0, argCount - 4);
-        int totalStackSize = -curStackOffset + 4 + (extraArgs * 4);
-        // 注意：MIPS 栈要求 8 字节对齐，最好处理一下，这里先忽略
+        int stackSpaceForArgs = extraArgs * 4;
 
-        // 3.1 下降 SP
-        new CalcAsm(Register.SP, AsmOp.ADDIU, Register.SP, -totalStackSize);
+        // SP 下降：覆盖当前栈帧 + 保存的寄存器 + RA + 栈参数
+        // 注意：curStackOffset 此时已经包含了 savedRegs 和 RA
+        new CalcAsm(Register.SP, AsmOp.ADDIU, Register.SP, curStackOffset - stackSpaceForArgs);
 
-        // 3.2 跳转 (JAL)
-        // 目标标签去掉 @
         new JumpAsm(AsmOp.JAL, parseLabel(targetFunc.getName()));
 
-        // 3.3 恢复 SP
-        new CalcAsm(Register.SP, AsmOp.ADDIU, Register.SP, totalStackSize);
+        // 6. 恢复 SP
+        new CalcAsm(Register.SP, AsmOp.ADDIU, Register.SP, -(curStackOffset - stackSpaceForArgs));
 
-        // 4. 恢复现场 ($ra)
-        // 从之前存的位置把 $ra 读回来
+        // 7. 恢复 $ra
         new MemAsm(AsmOp.LW, Register.RA, Register.SP, raOffset);
+        curStackOffset += 4; // 逻辑弹栈 RA
 
-        // 5. 处理返回值
-        // 如果 CallInst 不是 void，结果在 $v0，需要搬运到 CallInst 对应的位置
+        // 8. 【关键修复】恢复 Caller-Saved 寄存器 (倒序)
+        // 注意偏移量的计算
+        int tempOffset = raOffset;
+        for (int i = savedRegs.size() - 1; i >= 0; i--) {
+            tempOffset += 4; // 往回找上一个存的位置
+            new MemAsm(AsmOp.LW, savedRegs.get(i), Register.SP, tempOffset);
+        }
+        curStackOffset += (savedRegs.size() * 4); // 逻辑弹栈 Regs
+
+        // 9. 处理返回值
         if (!(callInst.getType() instanceof VoidType)) {
             Register targetReg = var2reg.getOrDefault(callInst, Register.K0);
-
-            // 把 $v0 的值移到 targetReg
             new MoveAsm(targetReg, Register.V0);
-
-            // 如果 targetReg 是 K0，说明溢出了，刷回栈
             if (targetReg == Register.K0) {
                 new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(callInst));
             }
@@ -1130,84 +1114,54 @@ public class MipsBuilder {
     }
 
     private void buildGepInst(GepInst gepInst) {
-        // 1. 确定目标寄存器
-        // 最终地址要存在这里。如果溢出到栈，先用 K0 暂存
+        // 1. 确定目标寄存器 (存最终地址)
         Register targetReg = var2reg.getOrDefault(gepInst, Register.K0);
 
-        // 2. 准备基地址 -> 放入 targetReg
-        // 这样我们后续所有的加法都在 targetReg 上进行，不破坏源寄存器
+        // 2. 准备基地址 (Base Pointer)
         Value basePointer = gepInst.getPointer();
-
         if (basePointer instanceof GlobalVar) {
             new LaAsm(targetReg, parseLabel(basePointer.getName()));
         } else if (var2reg.containsKey(basePointer)) {
             new MoveAsm(targetReg, var2reg.get(basePointer));
         } else if (basePointer instanceof ConstString) {
-            // 逻辑同 GlobalVar，加载标签地址
             new LaAsm(targetReg, parseLabel(basePointer.getName()));
         } else {
             new MemAsm(AsmOp.LW, targetReg, Register.SP, var2Offset.get(basePointer));
         }
 
-        // 3. 遍历索引，累加偏移到 targetReg
-        Type baseType = basePointer.getType();
-        Type curType;
-
-        if (baseType instanceof PointerType) {
-            curType = ((PointerType) baseType).getPointeeType();
-        } else {
-            // 针对 ConstString 或某些 GlobalVar，类型可能直接就是 ArrayType
-            curType = baseType;
-        }
-
+        // 3. 遍历所有索引，全部按 4 字节 (int) 步长累加
+        // 这完美兼容 "gep base, i" (指针) 和 "gep base, 0, i" (数组)
         for (int i = 1; i < gepInst.getNumOperands(); i++) {
             Value index = gepInst.getOperand(i);
-            int elementSize = getSize(curType);
 
             if (index instanceof ConstInt) {
                 // --- 常量索引 ---
-                int offset = ((ConstInt) index).getValue() * elementSize;
+                // 直接乘 4
+                int offset = ((ConstInt) index).getValue() * 4;
                 if (offset != 0) {
                     new CalcAsm(targetReg, AsmOp.ADDIU, targetReg, offset);
                 }
             } else {
                 // --- 变量索引 ---
-                // 1. 加载索引到 K1
-                Register idxReg = Register.K1;
+                Register idxReg = Register.K1; // 借用 K1 加载索引
                 if (var2reg.containsKey(index)) {
                     idxReg = var2reg.get(index);
                 } else {
                     new MemAsm(AsmOp.LW, idxReg, Register.SP, var2Offset.get(index));
                 }
 
-                // 2. 计算 offset = index * elementSize -> 存入 GP (避免污染 K1/Target)
-                Register offsetReg = Register.GP;
+                // --- 核心修改：像 Code B 一样，强制左移 2 位 (*4) ---
+                // 计算 offset = index * 4
+                // 我们使用 T8 存放偏移量，防止覆盖 idxReg 或 targetReg
+                Register offsetReg = Register.T8;
+                new CalcAsm(offsetReg, AsmOp.SLL, idxReg, 2);
 
-                // 简单的乘法/移位逻辑
-                boolean usedShift = false;
-                if (elementSize > 0 && (elementSize & (elementSize - 1)) == 0) {
-                    int shift = Integer.numberOfTrailingZeros(elementSize);
-                    new CalcAsm(offsetReg, AsmOp.SLL, idxReg, shift);
-                    usedShift = true;
-                }
-
-                if (!usedShift) {
-                    new LiAsm(Register.V0, elementSize);
-                    new MulDivAsm(idxReg, AsmOp.MULT, Register.V0);
-                    new MDRegAsm(AsmOp.MFLO, offsetReg);
-                }
-
-                // 3. 累加: targetReg = targetReg + offsetReg
+                // 累加到基地址
                 new CalcAsm(targetReg, AsmOp.ADDU, targetReg, offsetReg);
-            }
-
-            // 下钻类型
-            if (curType instanceof ArrayType) {
-                curType = ((ArrayType) curType).getElementType();
             }
         }
 
-        // 4. 溢出处理
+        // 4. 溢出处理：如果 gepInst 的结果需要存回栈
         if (!var2reg.containsKey(gepInst)) {
             new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(gepInst));
         }

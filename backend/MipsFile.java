@@ -44,8 +44,10 @@ public class MipsFile {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(".data:\n");
+        sb.append(".data\n");
+        sb.append(".align 2\n");
         for (GlobalAssembly globalAssembly : dataSegment) {
+            sb.append(".align 2\n");
             sb.append(globalAssembly).append("\n");
         }
         sb.append("\n");

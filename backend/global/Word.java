@@ -43,6 +43,7 @@ public class Word implements GlobalAssembly {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(varName).append(": .word ");
+        //sb.append(varName).append(": .align 2 ");
 
         if (!isArray) {
             // 标量情况

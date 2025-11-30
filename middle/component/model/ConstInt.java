@@ -23,7 +23,7 @@ public class ConstInt extends Constant {
     /**
      * 私有构造函数，强制使用 .get()
      */
-    private ConstInt(IntegerType type, int value) {
+    protected ConstInt(IntegerType type, int value) {
         super(type);
         this.value = value;
         // 提示：将常量的“名字”设置为它的值，方便 toString

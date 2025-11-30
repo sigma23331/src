@@ -1,10 +1,13 @@
 package middle.component.model;
 
 import middle.component.inst.AllocInst;
-import middle.component.inst.Instruction; // (下一步)
+import middle.component.inst.Instruction;
 import middle.component.inst.TerminatorInst;
-import middle.component.type.LabelType; // (您需要创建这个 Type)
+import middle.component.type.LabelType;
+
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -16,6 +19,25 @@ public class BasicBlock extends Value {
 
     private Function parent;
     private final LinkedList<Instruction> instructions;
+    private boolean isDeleted = false; // 标记是否被删除 (优化用)
+
+    // ==========================================
+    // 优化所需字段 (CFG & Dominator Tree)
+    // ==========================================
+
+    // CFG (控制流图) 信息
+    private List<BasicBlock> nextBlocks = new ArrayList<>(); // 后继块 (Successors)
+    private List<BasicBlock> prevBlocks = new ArrayList<>(); // 前驱块 (Predecessors)
+
+    // 支配树信息 (Mem2Reg 需要)
+    private BasicBlock immediateDominator; // 直接支配者 (IDom)
+    private List<BasicBlock> dominateBlocks = new ArrayList<>(); // 支配的所有块
+    private List<BasicBlock> immediateDominateBlocks = new ArrayList<>(); // 支配树中的直接子节点
+    private List<BasicBlock> dominanceFrontier = new ArrayList<>(); // 支配边界 (DF)
+    private int imdomDepth = 0; // 支配树深度
+
+    // 循环信息 (可选，未来循环优化可能用到)
+    private int loopDepth = 0;
 
     /**
      * 构造函数。
@@ -71,6 +93,7 @@ public class BasicBlock extends Value {
                     if (inst instanceof TerminatorInst) {
                         return; // (!!!)
                     } else {
+                        // 插在终结者之前，保证基本块性质
                         this.instructions.add(this.instructions.size() - 1, inst);
                     }
                 } else {
@@ -103,6 +126,104 @@ public class BasicBlock extends Value {
         }
     }
 
+    // ==========================================
+    // 为优化 (Mem2Reg/RegAlloc) 补充的方法
+    // ==========================================
+
+    /**
+     * 获取第一条指令 (用于检查 Phi 指令)
+     */
+    public Instruction getFirstInstruction() {
+        if (instructions.isEmpty()) return null;
+        return instructions.getFirst();
+    }
+
+    /**
+     * 获取最后一条指令 (用于获取 Br 指令构建 CFG)
+     */
+    public Instruction getLastInstruction() {
+        if (instructions.isEmpty()) return null;
+        return instructions.getLast();
+    }
+
+    // --- CFG Getter/Setter ---
+
+    public List<BasicBlock> getNextBlocks() {
+        return nextBlocks;
+    }
+
+    public void setNextBlocks(List<BasicBlock> nextBlocks) {
+        this.nextBlocks = nextBlocks;
+    }
+
+    public List<BasicBlock> getPrevBlocks() {
+        return prevBlocks;
+    }
+
+    public void setPrevBlocks(List<BasicBlock> prevBlocks) {
+        this.prevBlocks = prevBlocks;
+    }
+
+    // --- Dominator Tree Getter/Setter ---
+
+    public BasicBlock getImmediateDominator() {
+        return immediateDominator;
+    }
+
+    public void setImmediateDominator(BasicBlock immediateDominator) {
+        this.immediateDominator = immediateDominator;
+    }
+
+    public List<BasicBlock> getDominateBlocks() {
+        return dominateBlocks;
+    }
+
+    public void setDominateBlocks(List<BasicBlock> dominateBlocks) {
+        this.dominateBlocks = dominateBlocks;
+    }
+
+    public List<BasicBlock> getImmediateDominateBlocks() {
+        return immediateDominateBlocks;
+    }
+
+    public void setImmediateDominateBlocks(List<BasicBlock> immediateDominateBlocks) {
+        this.immediateDominateBlocks = immediateDominateBlocks;
+    }
+
+    public List<BasicBlock> getDominanceFrontier() {
+        return dominanceFrontier;
+    }
+
+    public void setDominanceFrontier(List<BasicBlock> dominanceFrontier) {
+        this.dominanceFrontier = dominanceFrontier;
+    }
+
+    public int getImdomDepth() {
+        return imdomDepth;
+    }
+
+    public void setImdomDepth(int imdomDepth) {
+        this.imdomDepth = imdomDepth;
+    }
+
+    public int getLoopDepth() {
+        return loopDepth;
+    }
+
+    public void setLoopDepth(int loopDepth) {
+        this.loopDepth = loopDepth;
+    }
+
+    // --- 标记删除相关 ---
+
+    public boolean isDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        isDeleted = deleted;
+    }
+
     @Override
     public String toString() {
         // // 提示：
@@ -111,8 +232,8 @@ public class BasicBlock extends Value {
         //
         // // (注意：标签的第一行不缩进，指令缩进)
         String instStr = this.instructions.stream()
-             .map(inst -> "\t" + inst.toString())
-             .collect(Collectors.joining("\n"));
+                .map(inst -> "\t" + inst.toString())
+                .collect(Collectors.joining("\n"));
         // // (如果指令为空，可能需要一个占位符，例如一个 ret)
         return this.getName() + ":\n" + instStr;
     }

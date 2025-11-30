@@ -82,11 +82,11 @@ public class Compiler {
 
                 // 3. 创建 MipsBuilder
                 // 参数2: optimizeOn (是否开启优化)，目前我们传入 false
-                MipsBuilder mipsBuilder = new MipsBuilder(irModule, false);
+                MipsBuilder mipsBuilder = new MipsBuilder(irModule, true);
 
                 // 4. 执行构建
                 // 这会将指令写入 MipsFile 的单例对象中
-                mipsBuilder.build(false);
+                mipsBuilder.build(true);
 
                 // 5. 输出 MIPS 汇编到文件
                 printMips(mipsOutputFile);

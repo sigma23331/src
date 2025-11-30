@@ -1,9 +1,11 @@
-package middle.component.inst;
+ package middle.component.inst;
 
 import middle.component.model.BasicBlock;
 import middle.component.model.Value;
 import middle.component.type.Type;
-import java.util.stream.Collectors;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * PHI 指令 (phi)。
@@ -12,9 +14,7 @@ import java.util.stream.Collectors;
 public class PhiInst extends Instruction {
 
     /**
-     * 构造函数 (创建一个“空”的 phi)。
-     * @param name 结果名
-     * @param type 要合并的值的类型 (例如 i32)
+     * 原有的构造函数
      */
     public PhiInst(String name, Type type) {
         super(type);
@@ -22,15 +22,39 @@ public class PhiInst extends Instruction {
     }
 
     /**
-     * (新) 向 PHI 节点添加一个“传入”分支。
-     * * 关键方法 *
-     * @param value 来自该分支的值 (例如 ConstInt.get(10))
-     * @param fromBlock 该分支的 BasicBlock (例如 %if_true_block)
+     * (新) 构造函数：适配 Mem2Reg 优化的调用需求
+     * @param type 数据类型 (例如 i32)
+     * @param parentBlock 该指令所在的父基本块 (虽然指令通常后插入，但这里可以先接收)
+     * @param predBlocks 前驱基本块列表 (构造时不一定立即填充操作数，通常在重命名阶段填充)
+     */
+    public PhiInst(Type type, BasicBlock parentBlock, List<BasicBlock> predBlocks) {
+        super(type);
+        // 给一个默认名字，例如 "phi"
+        this.setName("phi");
+
+        // Mem2Reg 在 placePhiNodes 阶段创建 Phi 时，
+        // 具体的 incoming value 还没有确定 (需要等到 rename 阶段)。
+        // 所以这里我们只需要初始化对象即可。
+        // 操作数会在后续调用 addValue / addIncoming 时添加。
+    }
+
+    /**
+     * (新) 适配 Mem2Reg 的 addValue 方法
+     * Mem2Reg 代码中使用了 phi.addValue(block, value)，参数顺序通常是 (块, 值)
+     */
+    public void addValue(BasicBlock fromBlock, Value value) {
+        // 委托给 addIncoming，注意参数顺序调整
+        addIncoming(value, fromBlock);
+    }
+
+    /**
+     * 向 PHI 节点添加一个“传入”分支。
+     * LLVM IR 标准格式: [ value, block ]
+     * @param value 来自该分支的值
+     * @param fromBlock 该分支的 BasicBlock
      */
     public void addIncoming(Value value, BasicBlock fromBlock) {
-        // // 提示：
-        // // 1. Phi 指令的操作数总是成对出现的 (Value, BasicBlock)
-        // // 2. 我们使用 addOperand 动态添加
+        // 1. Phi 指令的操作数总是成对出现的 (Value, BasicBlock)
         this.addOperand(value);
         this.addOperand(fromBlock);
     }
@@ -39,8 +63,7 @@ public class PhiInst extends Instruction {
      * 获取传入分支的数量
      */
     public int getNumIncoming() {
-        // // 提示：
-        // // 操作数是成对的
+        // 操作数是成对的
         return this.getNumOperands() / 2;
     }
 
@@ -48,7 +71,6 @@ public class PhiInst extends Instruction {
      * 获取第 i 个传入的值
      */
     public Value getIncomingValue(int i) {
-        // // 提示：
         return this.getOperand(i * 2);
     }
 
@@ -56,8 +78,30 @@ public class PhiInst extends Instruction {
      * 获取第 i 个传入的块
      */
     public BasicBlock getIncomingBlock(int i) {
-        // // 提示：
         return (BasicBlock) this.getOperand(i * 2 + 1);
+    }
+
+    /**
+     * 获取该 Phi 指令涉及的所有前驱块列表
+     * (RegAlloc 可能需要用到)
+     */
+    public List<BasicBlock> getBlocks() {
+        List<BasicBlock> blocks = new ArrayList<>();
+        for (int i = 0; i < getNumIncoming(); i++) {
+            blocks.add(getIncomingBlock(i));
+        }
+        return blocks;
+    }
+
+    /**
+     * 获取该 Phi 指令涉及的所有传入值列表
+     */
+    public List<Value> getIncomingValues() {
+        List<Value> values = new ArrayList<>();
+        for (int i = 0; i < getNumIncoming(); i++) {
+            values.add(getIncomingValue(i));
+        }
+        return values;
     }
 
     @Override
@@ -67,19 +111,17 @@ public class PhiInst extends Instruction {
 
     @Override
     public String toString() {
-        // // 提示：
-        // // 1. 拼装所有传入分支
-        // //    例如: "[ 10, %if_true ], [ 20, %if_false ]"
         StringBuilder incomingStr = new StringBuilder();
-        for (int i = 0;i < getNumIncoming(); i++) {
-            incomingStr.append("[").append(getIncomingValue(i)).
-                    append(", %").append(getIncomingBlock(i).getName()).append("]");
+        for (int i = 0; i < getNumIncoming(); i++) {
+            incomingStr.append("[ ");
+            incomingStr.append(getIncomingValue(i).getName());
+            incomingStr.append(", %");
+            incomingStr.append(getIncomingBlock(i).getName());
+            incomingStr.append(" ]");
             if (i < getNumIncoming() - 1) {
                 incomingStr.append(", ");
             }
         }
-        // // 2. 拼装 Phi 指令
-        // //    例如: "%a.phi = phi i32 [ 10, %if_true ], [ 20, %if_false ]"
         return this.getName() + " = phi " + this.getType().toString() + " " + incomingStr;
     }
 }

@@ -7,6 +7,7 @@ import backend.enums.Register;
 import backend.global.Asciiz;
 import backend.global.Word;
 import backend.text.*;
+import backend.utils.RegAlloc;
 import com.sun.jdi.connect.Connector;
 import middle.component.inst.*;
 import middle.component.inst.io.*;
@@ -49,6 +50,8 @@ public class MipsBuilder {
             // TODO: 填入源代码中的优化步骤
             // 1. ZextRemoval
             // 2. RegAlloc (这是核心，填充 var2reg)
+            RegAlloc regAlloc = new RegAlloc();
+            regAlloc.run(module);
             // 3. RemovePhi
             // 4. 更新 Module ID
         }
@@ -211,7 +214,7 @@ public class MipsBuilder {
 
         // 7.1 初始化寄存器分配表
         // 如果开启优化，后续会有 Pass 填充 var2reg；否则为空，所有变量走栈
-        this.var2reg = optimizeOn ? new HashMap<>(/* function.getVar2reg() TODO:如果未来有 */) : new HashMap<>();
+        this.var2reg = optimizeOn ? new HashMap<>(function.getVar2reg()) : new HashMap<>();
 
         // 7.2 生成函数标签 (去掉 @ 前缀)
         new Label(parseLabel(function.getName()));
@@ -613,19 +616,31 @@ public class MipsBuilder {
         // 必须先把常量 li 到寄存器，然后用 div 指令
         // 例子: a = b / 10
         // MIPS: li $at, 10; div $t1, $at; mflo $t2
+        // Branch 4: 除法/取模 (SDIV/SREM)
         if (binaryInst.getOpCode() == BinaryOpCode.SDIV) {
-            // 除法：使用 MulDivAsm (AsmOp.DIV) + MDRegAsm (MFLO)
-            new LiAsm(Register.K1, imm); // 必须把立即数加载到寄存器
-
-            if (constIsFirst) {
-                // Case: 100 / a -> div $k1, varReg
-                new MulDivAsm(Register.K1, AsmOp.DIV, varReg);
-            } else {
-                // Case: a / 100 -> div varReg, $k1
-                new MulDivAsm(varReg, AsmOp.DIV, Register.K1);
+            // 【优化逻辑开始】
+            // 只有当：1. 除数是常量 (即 !constIsFirst) 2. 且除数不为0 时，才能优化
+            // 例子: a / 10 (优化√), 10 / a (不优化×)
+            if (!constIsFirst && imm != 0 && optimizeOn) {
+                // 调用外部的优化工具类
+                // 注意：varReg 是被除数所在的寄存器，imm 是除数(常量)，targetReg 是目标寄存器
+                backend.utils.OptimizedDivision.emitDivOptimization(varReg, imm, targetReg);
             }
-            // 结果在 LO 寄存器，取出来
-            new MDRegAsm(AsmOp.MFLO, targetReg);
+            else {
+                // 【原有逻辑保持不变】
+
+                new LiAsm(Register.K1, imm); // 把立即数加载到 K1
+
+                if (constIsFirst) {
+                    // Case: 100 / a -> div $k1, varReg
+                    new MulDivAsm(Register.K1, AsmOp.DIV, varReg);
+                } else {
+                    // Case: a / 100 (如果不满足优化条件会走这里) -> div varReg, $k1
+                    new MulDivAsm(varReg, AsmOp.DIV, Register.K1);
+                }
+                // 结果在 LO 寄存器，取出来
+                new MDRegAsm(AsmOp.MFLO, targetReg);
+            }
         }
 
         if (binaryInst.getOpCode() == BinaryOpCode.SREM) {
@@ -1114,58 +1129,69 @@ public class MipsBuilder {
     }
 
     private void buildGepInst(GepInst gepInst) {
-        // 1. 确定目标寄存器 (存最终地址)
         Register targetReg = var2reg.getOrDefault(gepInst, Register.K0);
-
-        // 2. 准备基地址 (Base Pointer)
         Value basePointer = gepInst.getPointer();
-        if (basePointer instanceof GlobalVar) {
-            new LaAsm(targetReg, parseLabel(basePointer.getName()));
-        } else if (var2reg.containsKey(basePointer)) {
-            new MoveAsm(targetReg, var2reg.get(basePointer));
-        } else if (basePointer instanceof ConstString) {
-            new LaAsm(targetReg, parseLabel(basePointer.getName()));
-        } else {
-            new MemAsm(AsmOp.LW, targetReg, Register.SP, var2Offset.get(basePointer));
-        }
 
-        // 3. 遍历所有索引，全部按 4 字节 (int) 步长累加
-        // 这完美兼容 "gep base, i" (指针) 和 "gep base, 0, i" (数组)
+        // 1. 先计算所有索引的总偏移量，存入 $t8
+        // 这样可以确保在覆盖 targetReg 之前，所有索引值都已被读取
+        Register totalOffsetReg = Register.T8;
+        new LiAsm(totalOffsetReg, 0); // init offset = 0
+
         for (int i = 1; i < gepInst.getNumOperands(); i++) {
             Value index = gepInst.getOperand(i);
 
+            // 使用 V1 作为当前索引的临时寄存器
+            Register currIdxReg = Register.V1;
+
             if (index instanceof ConstInt) {
-                // --- 常量索引 ---
-                // 直接乘 4
-                int offset = ((ConstInt) index).getValue() * 4;
-                if (offset != 0) {
-                    new CalcAsm(targetReg, AsmOp.ADDIU, targetReg, offset);
-                }
+                int val = ((ConstInt) index).getValue();
+                if (val == 0) continue;
+                new LiAsm(currIdxReg, val);
+            } else if (var2reg.containsKey(index)) {
+                new MoveAsm(currIdxReg, var2reg.get(index));
             } else {
-                // --- 变量索引 ---
-                Register idxReg = Register.K1; // 借用 K1 加载索引
-                if (var2reg.containsKey(index)) {
-                    idxReg = var2reg.get(index);
-                } else {
-                    new MemAsm(AsmOp.LW, idxReg, Register.SP, var2Offset.get(index));
-                }
+                Integer offset = var2Offset.get(index);
+                if (offset == null) throw new RuntimeException("GEP index missing");
+                new MemAsm(AsmOp.LW, currIdxReg, Register.SP, offset);
+            }
 
-                // --- 核心修改：像 Code B 一样，强制左移 2 位 (*4) ---
-                // 计算 offset = index * 4
-                // 我们使用 T8 存放偏移量，防止覆盖 idxReg 或 targetReg
-                Register offsetReg = Register.T8;
-                new CalcAsm(offsetReg, AsmOp.SLL, idxReg, 2);
+            // currIdx * 4
+            new CalcAsm(currIdxReg, AsmOp.SLL, currIdxReg, 2);
 
-                // 累加到基地址
-                new CalcAsm(targetReg, AsmOp.ADDU, targetReg, offsetReg);
+            // totalOffset += currIdxOffset
+            new CalcAsm(totalOffsetReg, AsmOp.ADDU, totalOffsetReg, currIdxReg);
+        }
+
+        // 2. 现在可以安全地加载基地址到 targetReg 了
+        // 即使 targetReg 和 index 寄存器冲突也没关系，因为 index 已经用完了
+
+        if (basePointer instanceof GlobalVar || basePointer instanceof ConstString) {
+            // 全局变量/常量：la targetReg, label
+            String label = parseLabel(basePointer.getName());
+            new LaAsm(targetReg, label);
+        } else if (var2reg.containsKey(basePointer)) {
+            // 寄存器：move targetReg, baseReg
+            new MoveAsm(targetReg, var2reg.get(basePointer));
+        } else {
+            // 栈：lw targetReg, offset($sp)
+            Integer offset = var2Offset.get(basePointer);
+            if (offset == null) throw new RuntimeException("GEP base missing");
+            new MemAsm(AsmOp.LW, targetReg, Register.SP, offset);
+        }
+
+        // 3. 最终相加：Result = Base + TotalOffset
+        new CalcAsm(targetReg, AsmOp.ADDU, targetReg, totalOffsetReg);
+
+        // 4. 溢出处理
+        if (!var2reg.containsKey(gepInst)) {
+            Integer offset = var2Offset.get(gepInst);
+            if (offset != null) {
+                new MemAsm(AsmOp.SW, targetReg, Register.SP, offset);
             }
         }
-
-        // 4. 溢出处理：如果 gepInst 的结果需要存回栈
-        if (!var2reg.containsKey(gepInst)) {
-            new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(gepInst));
-        }
     }
+
+
 
     private void buildGetintInst(GetintInst inst) {
         // 1. 系统调用 5 (read_int)

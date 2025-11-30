@@ -1,70 +1,61 @@
 package middle.component.model;
 
+import backend.enums.Register; // 引入后端的寄存器枚举
 import middle.component.type.ArrayType;
-import middle.component.type.FunctionType;
 import middle.component.type.PointerType;
 import middle.component.type.Type;
+import middle.component.type.VoidType;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * 函数 (Function)。
- * * 关键区别：
- * 1. 继承自 Value (不是 User)。
- * 2. 构造函数干净，无副作用 (不依赖 IRData)。
- * 3. 不包含后端 (var2reg) 或分析 (getPostOrder) 代码。
- * 4. 使用 LinkedList 存储 BasicBlock。
- * 5. 使用 isDeclaration (不是 isBuiltIn)。
  */
 public class Function extends Value {
 
     private final Type returnType;
     private final ArrayList<FuncParam> params;
     private final LinkedList<BasicBlock> basicBlocks;
-
-    /**
-     * 属性：这是否只是一个“声明” (例如 declare i32 @getint())
-     */
     private final boolean isDeclaration;
+
+    // ==========================================
+    // 后端优化所需字段 (RegAlloc 结果)
+    // ==========================================
+    /**
+     * 变量到物理寄存器的映射结果。
+     * 由 RegAlloc Pass 填充，由 MipsBuilder 使用。
+     */
+    private Map<Value, Register> var2reg = new HashMap<>();
 
     /**
      * 构造函数 (用于“定义”或“声明”)
-     * @param name 函数名 (例如 @main)
-     * @param returnType 返回类型
-     * @param paramTypes 参数类型列表 (用于创建 FuncParam)
-     * @param isDeclaration 这是声明(true)还是定义(false)
      */
     public Function(String name, Type returnType, ArrayList<Type> paramTypes, boolean isDeclaration) {
-        // // 提示：
-        // // 1. 创建此函数的 FunctionType
-        super(returnType);
+        super(returnType); // 这里 super 传入 FunctionType 会更准确，不过目前逻辑也行
         this.returnType = returnType;
+
+        // 注意：函数名在 IR 中通常带 @，但在 Function 对象里你可以存纯名字
+        // 建议：构造时去掉 @，toString 时加上，或者反之。保持一致即可。
         this.setName(name);
+
         this.isDeclaration = isDeclaration;
         this.basicBlocks = new LinkedList<>();
         this.params = new ArrayList<>();
-        // // 2. 根据 paramTypes 自动创建 FuncParam 对象
-        ArrayList<Type> irParamTypes = new ArrayList<>();
 
+        ArrayList<Type> irParamTypes = new ArrayList<>();
         for (int i = 0; i < paramTypes.size(); i++) {
             Type astType = paramTypes.get(i);
-            Type irType; // 這是我們將要創建的 FuncParam 的類型
-
+            Type irType;
             if (astType instanceof ArrayType) {
-                // --- 情況 A：數組參數 (int a[]) ---
-                // (astType 是 ArrayType(i32, -1))
-                // *必須* 將其退化為指針 (i32*)
                 irType = PointerType.get(((ArrayType) astType).getElementType());
             } else {
-                // --- 情況 B：標量參數 (int n) ---
                 irType = astType;
             }
-
-            // 將 *正確* 的 IR 類型添加到列表中
             irParamTypes.add(irType);
-
-            // 創建 FuncParam (現在使用 irType)
             FuncParam param = new FuncParam(irType, "", i);
             param.setParent(this);
             this.params.add(param);
@@ -81,40 +72,42 @@ public class Function extends Value {
      * 由 IRBuilder 或 BasicBlock 构造函数调用
      */
     public void addBasicBlock(BasicBlock bb) {
-        // // 提示：
         this.basicBlocks.add(bb);
-        bb.setParent(this); // 确保双向链接
+        bb.setParent(this);
     }
 
     public BasicBlock getEntryBlock() {
-        // // 提示：
-        // // 获取第一个基本块 (入口)
         return this.basicBlocks.isEmpty() ? null : this.basicBlocks.getFirst();
+    }
+
+    // ==========================================
+    // 后端接口实现
+    // ==========================================
+
+    public void setVar2reg(Map<Value, Register> var2reg) {
+        this.var2reg = var2reg;
+    }
+
+    public Map<Value, Register> getVar2reg() {
+        return this.var2reg;
     }
 
     @Override
     public String toString() {
-        // // 提示：
-        // // 1. 拼装参数字符串 (例如 "i32 %arg0, i32 %arg1")
         String paramStr = this.params.stream()
-            .map(Object::toString)
-            .collect(Collectors.joining(", "));
-        if (this.isDeclaration) {
-            // 2. 如果是“声明”
-            // 例如: "declare i32 @getint()"
-            return "declare " + this.returnType.toString() + " @" +
-                   this.getName() + "(" + paramStr + ")";
-        } else {
-            // 3. 如果是“定义”
-            // 拼装所有 BasicBlock 的 toString()
-            String bbStr = this.basicBlocks.stream()
                 .map(Object::toString)
-                .collect(Collectors.joining("\n"));
-            // 例如: "define dso_local i32 @main() { ... }"
+                .collect(Collectors.joining(", "));
+        if (this.isDeclaration) {
+            return "declare " + this.returnType.toString() + " @" +
+                    this.getName() + "(" + paramStr + ")";
+        } else {
+            String bbStr = this.basicBlocks.stream()
+                    .map(Object::toString)
+                    .collect(Collectors.joining("\n"));
             return "define dso_local " + this.returnType.toString() + " @" +
-                   this.getName() + "(" + paramStr + ") {\n" +
-                   bbStr +
-                   "\n}";
+                    this.getName() + "(" + paramStr + ") {\n" +
+                    bbStr +
+                    "\n}";
         }
     }
 }

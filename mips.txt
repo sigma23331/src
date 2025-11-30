@@ -1,56 +1,870 @@
 .data
 .align 2
 .align 2
-_str_0: .asciiz "999\n"
+globalVar: .word 0
+.align 2
+var6: .word 0
+.align 2
+globalVar1: .word 0
+.align 2
+globalVar2: .word 0
+.align 2
+vec: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+.align 2
+vec1: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+.align 2
+const0: .word 0
+.align 2
+const12: .word 1, 2
+.align 2
+const3: .word 3
+.align 2
+declareFunc_var0: .word 0
+.align 2
+declareFunc_vars1: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+.align 2
+declareFunc_var22: .word 0
+.align 2
+shortPath_sum3: .word 0
+.align 2
+_str_0: .asciiz "22376286\n"
+.align 2
+_str_1: .asciiz "\n"
+.align 2
+_str_2: .asciiz "globalVar="
+.align 2
+_str_3: .asciiz "calculateFunc()="
+.align 2
+_str_4: .asciiz "declareFunc()="
+.align 2
+_str_5: .asciiz "0\n"
+.align 2
+_str_6: .asciiz "1\n"
+.align 2
+_str_7: .asciiz "2\n"
+.align 2
+_str_8: .asciiz "sum1="
 
 .text:
 main:
 main_entry0:
-    addiu $k0, $sp, -12
-    sw $k0, -4($sp)
-    lw $k0, -4($sp)
+    addiu $s2, $sp, -4
+    addiu $t1, $sp, -12
+    addiu $s1, $sp, -16
+    addiu $t5, $sp, -20
+    addiu $t0, $sp, -24
+    addiu $t0, $sp, -28
+    addiu $s0, $sp, -32
+    addiu $t4, $sp, -36
+    addiu $t7, $sp, -40
+    addiu $t6, $sp, -48
+    addiu $t3, $sp, -52
+    addiu $t2, $sp, -56
+    li $t8, 0
+    la $t0, _str_0
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
+    li $k1, 0
+    sw $k1, 0($s2)
+    li $t8, 0
+    move $t0, $t1
+    addu $t0, $t0, $t8
     li $k1, 1
-    sw $k1, 0($k0)
-    lw $k0, -4($sp)
-    lw $k1, 0($k0)
-    sw $k1, -8($sp)
-    sw $ra, -16($sp)
-    lw $a0, -8($sp)
-    addiu $sp, $sp, -16
-    jal func
-    addiu $sp, $sp, 16
-    lw $ra, -16($sp)
+    sw $k1, 0($t0)
+    li $t8, 0
+    li $v1, 1
+    sll $v1, $v1, 2
+    addu $t8, $t8, $v1
+    move $t0, $t1
+    addu $t0, $t0, $t8
+    li $k1, 2
+    sw $k1, 0($t0)
+    li $k1, 3
+    sw $k1, 0($s1)
+    bne $t0, $zero, main_br_true_1096283470
+    j main_br_false_1096283470
+
+main_br_false_1096283470:
+    j main_lor_rhs3
+
+main_br_true_1096283470:
+    j main_if_then1
+
+main_if_then1:
+    li $k1, 1
+    sw $k1, 0($t5)
+    j main_if_follow2
+
+main_if_follow2:
+    lw $t0, 0($s2)
+    sll $t0, $t0, 0
+    li $k1, 4
+    div $t0, $k1
+    mfhi $t0
+    sra $v0, $t0, 31
+    srl $v0, $v0, 31
+    addu $v1, $t0, $v0
+    sra $t0, $v1, 1
+    move $a0, $t0
+    li $v0, 1
+    syscall
+    li $t8, 0
+    la $t0, _str_1
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
+    bne $t0, $zero, main_br_true_1712669532
+    j main_br_false_1712669532
+
+main_br_false_1712669532:
+    j main_if_follow5
+
+main_br_true_1712669532:
+    j main_if_then4
+
+main_lor_rhs3:
+    bne $t0, $zero, main_br_true_1225373914
+    j main_br_false_1225373914
+
+main_br_false_1225373914:
+    j main_if_follow2
+
+main_br_true_1225373914:
+    j main_if_then1
+
+main_if_then4:
+    li $t0, 34
+    addiu $s1, $t0, -1
+    la $k0, globalVar
+    lw $t5, 0($k0)
+    li $t8, 0
+    li $v1, 1
+    sll $v1, $v1, 2
+    addu $t8, $t8, $v1
+    move $t0, $t1
+    addu $t0, $t0, $t8
+    lw $t0, 0($t0)
+    li $k1, 44
+    div $t0, $k1
+    mfhi $t0
+    addiu $t0, $t0, 42
+    mul $t0, $t5, $t0
+    addu $t0, $s1, $t0
+    sw $t0, 0($s0)
+    j main_if_follow5
+
+main_if_follow5:
+    li $k1, 2342
+    sw $k1, 0($t4)
+    li $k1, 2323
+    sw $k1, 0($t7)
+    li $t8, 0
+    move $t0, $t6
+    addu $t0, $t0, $t8
+    li $k1, 10
+    sw $k1, 0($t0)
+    li $t8, 0
+    li $v1, 1
+    sll $v1, $v1, 2
+    addu $t8, $t8, $v1
+    move $t0, $t6
+    addu $t0, $t0, $t8
+    li $k1, 10
+    sw $k1, 0($t0)
+    li $k1, 1
+    sw $k1, 0($t3)
+    li $t8, 0
+    move $t0, $t6
+    addu $t0, $t0, $t8
+    sw $t0, -60($sp)
+    sw $t1, -64($sp)
+    sw $s2, -68($sp)
+    sw $s0, -72($sp)
+    sw $t7, -76($sp)
+    sw $t6, -80($sp)
+    sw $t5, -84($sp)
+    sw $t3, -88($sp)
+    sw $s1, -92($sp)
+    sw $t4, -96($sp)
+    sw $t2, -100($sp)
+    sw $ra, -104($sp)
+    move $a0, $t0
+    li $a1, 2
+    addiu $sp, $sp, -104
+    jal sum
+    addiu $sp, $sp, 104
+    lw $ra, -104($sp)
+    lw $t2, -100($sp)
+    lw $t4, -96($sp)
+    lw $s1, -92($sp)
+    lw $t3, -88($sp)
+    lw $t5, -84($sp)
+    lw $t6, -80($sp)
+    lw $t7, -76($sp)
+    lw $s0, -72($sp)
+    lw $s2, -68($sp)
+    lw $t1, -64($sp)
+    lw $t0, -60($sp)
+    move $t0, $v0
+    sw $t0, 0($t3)
+    la $k0, globalVar
+    lw $t0, 0($k0)
+    li $t8, 0
+    la $t1, _str_2
+    addu $t1, $t1, $t8
+    move $a0, $t1
+    li $v0, 4
+    syscall
+    move $a0, $t0
+    li $v0, 1
+    syscall
+    li $t8, 0
+    la $t0, _str_1
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
+    la $k0, globalVar1
+    lw $t0, 0($k0)
+    li $t8, 0
+    la $t1, _str_2
+    addu $t1, $t1, $t8
+    move $a0, $t1
+    li $v0, 4
+    syscall
+    move $a0, $t0
+    li $v0, 1
+    syscall
+    li $t8, 0
+    la $t0, _str_1
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
+    li $k1, 1
+    sw $k1, 0($t2)
+    lw $t0, 0($t4)
+    lw $t1, 0($t7)
+    li $t8, 0
+    move $t4, $t6
+    addu $t4, $t4, $t8
+    sw $t0, -60($sp)
+    sw $t1, -64($sp)
+    sw $s2, -68($sp)
+    sw $s0, -72($sp)
+    sw $t7, -76($sp)
+    sw $t6, -80($sp)
+    sw $t5, -84($sp)
+    sw $t3, -88($sp)
+    sw $s1, -92($sp)
+    sw $t4, -96($sp)
+    sw $t2, -100($sp)
+    sw $ra, -104($sp)
+    move $a0, $t0
+    move $a1, $t1
+    move $a2, $t4
+    addiu $sp, $sp, -104
+    jal caculateFunc
+    addiu $sp, $sp, 104
+    lw $ra, -104($sp)
+    lw $t2, -100($sp)
+    lw $t4, -96($sp)
+    lw $s1, -92($sp)
+    lw $t3, -88($sp)
+    lw $t5, -84($sp)
+    lw $t6, -80($sp)
+    lw $t7, -76($sp)
+    lw $s0, -72($sp)
+    lw $s2, -68($sp)
+    lw $t1, -64($sp)
+    lw $t0, -60($sp)
+    move $t0, $v0
+    sw $t0, 0($t2)
+    lw $t1, 0($t2)
+    li $t8, 0
+    la $t0, _str_3
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
+    move $a0, $t1
+    li $v0, 1
+    syscall
+    li $t8, 0
+    la $t0, _str_1
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
+    sw $t0, -60($sp)
+    sw $t1, -64($sp)
+    sw $s2, -68($sp)
+    sw $s0, -72($sp)
+    sw $t7, -76($sp)
+    sw $t6, -80($sp)
+    sw $t5, -84($sp)
+    sw $t3, -88($sp)
+    sw $s1, -92($sp)
+    sw $t4, -96($sp)
+    sw $t2, -100($sp)
+    sw $ra, -104($sp)
+    addiu $sp, $sp, -104
+    jal declareFunc
+    addiu $sp, $sp, 104
+    lw $ra, -104($sp)
+    lw $t2, -100($sp)
+    lw $t4, -96($sp)
+    lw $s1, -92($sp)
+    lw $t3, -88($sp)
+    lw $t5, -84($sp)
+    lw $t6, -80($sp)
+    lw $t7, -76($sp)
+    lw $s0, -72($sp)
+    lw $s2, -68($sp)
+    lw $t1, -64($sp)
+    lw $t0, -60($sp)
+    li $t8, 0
+    la $t0, _str_4
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
+    li $a0, 0
+    li $v0, 1
+    syscall
+    li $t8, 0
+    la $t0, _str_1
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
+    li $t8, 0
+    la $t0, _str_5
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
+    li $t8, 0
+    la $t0, _str_6
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
+    li $t8, 0
+    la $t0, _str_7
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
+    lw $t0, 0($t3)
+    li $t8, 0
+    la $t1, _str_8
+    addu $t1, $t1, $t8
+    move $a0, $t1
+    li $v0, 4
+    syscall
+    move $a0, $t0
+    li $v0, 1
+    syscall
+    li $t8, 0
+    la $t0, _str_1
+    addu $t0, $t0, $t8
+    move $a0, $t0
+    li $v0, 4
+    syscall
     li $v0, 10
     syscall
 
-func:
+declareFunc:
+declareFunc_entry0:
+    addiu $t0, $sp, -4
+    addiu $t0, $sp, -8
+    addiu $t1, $sp, -12
+    li $k1, 1
+    sw $k1, 0($t0)
+    la $k0, declareFunc_var0
+    li $k1, 1
+    sw $k1, 0($k0)
+    la $k0, const0
+    lw $t1, 0($k0)
+    li $t8, 0
+    la $t0, declareFunc_vars1
+    addu $t0, $t0, $t8
+    sw $t1, 0($t0)
+    jr $ra
+
+shortPath:
     sw $a0, -4($sp)
 
-func_entry0:
-    addiu $k0, $sp, -32
-    sw $k0, -8($sp)
-    addiu $k0, $sp, -36
-    sw $k0, -12($sp)
-    lw $k0, -8($sp)
-    sw $a0, 0($k0)
-    la $k0, _str_0
-    sw $k0, -16($sp)
-    lw $a0, -16($sp)
-    li $v0, 4
-    syscall
-    lw $k0, -8($sp)
-    lw $k1, 0($k0)
-    sw $k1, -20($sp)
-    lw $k0, -20($sp)
-    addiu $k0, $k0, 1
-    sw $k0, -24($sp)
-    lw $k0, -12($sp)
-    lw $k1, -24($sp)
-    sw $k1, 0($k0)
-    lw $k0, -12($sp)
-    lw $k1, 0($k0)
-    sw $k1, -28($sp)
-    lw $a0, -28($sp)
-    li $v0, 1
-    syscall
+shortPath_entry0:
+    addiu $t0, $sp, -8
+    lw $k1, -4($sp)
+    sw $k1, 0($t0)
+    la $k0, shortPath_sum3
+    lw $t0, 0($k0)
+    addiu $t0, $t0, 1
+    la $k0, shortPath_sum3
+    sw $t0, 0($k0)
+    la $k0, shortPath_sum3
+    lw $t0, 0($k0)
+    move $v0, $t0
     jr $ra
+
+caculateFunc:
+    sw $a0, -4($sp)
+    sw $a1, -8($sp)
+    sw $a2, -12($sp)
+
+caculateFunc_entry0:
+    addiu $t4, $sp, -16
+    addiu $t3, $sp, -20
+    addiu $t2, $sp, -24
+    lw $k1, -4($sp)
+    sw $k1, 0($t4)
+    lw $k1, -8($sp)
+    sw $k1, 0($t3)
+    lw $t1, 0($t4)
+    lw $t0, 0($t3)
+    bne $t0, $zero, caculateFunc_br_true_884457408
+    j caculateFunc_br_false_884457408
+
+caculateFunc_br_false_884457408:
+    j caculateFunc_if_follow2
+
+caculateFunc_br_true_884457408:
+    j caculateFunc_if_then1
+
+caculateFunc_if_then1:
+    li $v0, 0
+    jr $ra
+
+caculateFunc_if_follow2:
+    lw $t0, 0($t4)
+    lw $t1, 0($t3)
+    bne $t0, $zero, caculateFunc_br_true_913190639
+    j caculateFunc_br_false_913190639
+
+caculateFunc_br_false_913190639:
+    j caculateFunc_if_follow4
+
+caculateFunc_br_true_913190639:
+    j caculateFunc_if_then3
+
+caculateFunc_if_then3:
+    li $v0, 0
+    jr $ra
+
+caculateFunc_if_follow4:
+    lw $t0, 0($t4)
+    li $t8, 0
+    lw $t1, -12($sp)
+    addu $t1, $t1, $t8
+    lw $t1, 0($t1)
+    bne $t0, $zero, caculateFunc_br_true_1845066581
+    j caculateFunc_br_false_1845066581
+
+caculateFunc_br_false_1845066581:
+    j caculateFunc_if_follow6
+
+caculateFunc_br_true_1845066581:
+    j caculateFunc_if_then5
+
+caculateFunc_if_then5:
+    li $t8, 0
+    lw $t0, -12($sp)
+    addu $t0, $t0, $t8
+    lw $t0, 0($t0)
+    move $v0, $t0
+    jr $ra
+
+caculateFunc_if_follow6:
+    li $k1, 0
+    sw $k1, 0($t2)
+    j caculateFunc_for_cond7
+
+caculateFunc_for_cond7:
+    lw $t0, 0($t2)
+    lw $t1, 0($t4)
+    bne $t0, $zero, caculateFunc_br_true_1018937824
+    j caculateFunc_br_false_1018937824
+
+caculateFunc_br_false_1018937824:
+    j caculateFunc_for_follow10
+
+caculateFunc_br_true_1018937824:
+    j caculateFunc_for_body8
+
+caculateFunc_for_body8:
+    lw $t0, 0($t3)
+    bne $t0, $zero, caculateFunc_br_true_905654280
+    j caculateFunc_br_false_905654280
+
+caculateFunc_br_false_905654280:
+    j caculateFunc_if_follow12
+
+caculateFunc_br_true_905654280:
+    j caculateFunc_if_then11
+
+caculateFunc_for_update9:
+    lw $t0, 0($t2)
+    addiu $t0, $t0, 1
+    sw $t0, 0($t2)
+    j caculateFunc_for_cond7
+
+caculateFunc_for_follow10:
+    lw $t0, 0($t3)
+    move $v0, $t0
+    jr $ra
+
+caculateFunc_if_then11:
+    j caculateFunc_for_follow10
+
+caculateFunc_if_follow12:
+    li $t8, 0
+    lw $t0, -12($sp)
+    addu $t0, $t0, $t8
+    lw $t0, 0($t0)
+    bne $t0, $zero, caculateFunc_br_true_1915058446
+    j caculateFunc_br_false_1915058446
+
+caculateFunc_br_false_1915058446:
+    j caculateFunc_lor_rhs15
+
+caculateFunc_br_true_1915058446:
+    j caculateFunc_if_then13
+
+caculateFunc_if_then13:
+    j caculateFunc_for_update9
+
+caculateFunc_if_follow14:
+    bne $t0, $zero, caculateFunc_br_true_1419810764
+    j caculateFunc_br_false_1419810764
+
+caculateFunc_br_false_1419810764:
+    j caculateFunc_if_follow17
+
+caculateFunc_br_true_1419810764:
+    j caculateFunc_land_rhs18
+
+caculateFunc_lor_rhs15:
+    bne $t0, $zero, caculateFunc_br_true_922151033
+    j caculateFunc_br_false_922151033
+
+caculateFunc_br_false_922151033:
+    j caculateFunc_if_follow14
+
+caculateFunc_br_true_922151033:
+    j caculateFunc_if_then13
+
+caculateFunc_if_then16:
+    j caculateFunc_for_follow10
+
+caculateFunc_if_follow17:
+    bne $t0, $zero, caculateFunc_br_true_1516369375
+    j caculateFunc_br_false_1516369375
+
+caculateFunc_br_false_1516369375:
+    j caculateFunc_lor_rhs21
+
+caculateFunc_br_true_1516369375:
+    j caculateFunc_if_then19
+
+caculateFunc_land_rhs18:
+    lw $t0, 0($t4)
+    sw $t0, -28($sp)
+    sw $t1, -32($sp)
+    sw $t3, -36($sp)
+    sw $t2, -40($sp)
+    sw $t4, -44($sp)
+    sw $ra, -48($sp)
+    move $a0, $t0
+    addiu $sp, $sp, -48
+    jal shortPath
+    addiu $sp, $sp, 48
+    lw $ra, -48($sp)
+    lw $t4, -44($sp)
+    lw $t2, -40($sp)
+    lw $t3, -36($sp)
+    lw $t1, -32($sp)
+    lw $t0, -28($sp)
+    move $t0, $v0
+    bne $t0, $zero, caculateFunc_br_true_55909012
+    j caculateFunc_br_false_55909012
+
+caculateFunc_br_false_55909012:
+    j caculateFunc_if_follow17
+
+caculateFunc_br_true_55909012:
+    j caculateFunc_if_then16
+
+caculateFunc_if_then19:
+    j caculateFunc_for_follow10
+
+caculateFunc_if_follow20:
+    j caculateFunc_for_update9
+
+caculateFunc_lor_rhs21:
+    lw $t0, 0($t3)
+    sw $t0, -28($sp)
+    sw $t1, -32($sp)
+    sw $t3, -36($sp)
+    sw $t2, -40($sp)
+    sw $t4, -44($sp)
+    sw $ra, -48($sp)
+    move $a0, $t0
+    addiu $sp, $sp, -48
+    jal shortPath
+    addiu $sp, $sp, 48
+    lw $ra, -48($sp)
+    lw $t4, -44($sp)
+    lw $t2, -40($sp)
+    lw $t3, -36($sp)
+    lw $t1, -32($sp)
+    lw $t0, -28($sp)
+    move $t0, $v0
+    bne $t0, $zero, caculateFunc_br_true_1394336709
+    j caculateFunc_br_false_1394336709
+
+caculateFunc_br_false_1394336709:
+    j caculateFunc_if_follow20
+
+caculateFunc_br_true_1394336709:
+    j caculateFunc_if_then19
+
+sum:
+    sw $a0, -4($sp)
+    sw $a1, -8($sp)
+
+sum_entry0:
+    addiu $t1, $sp, -12
+    addiu $t3, $sp, -16
+    addiu $t2, $sp, -20
+    addiu $t0, $sp, -24
+    lw $k1, -8($sp)
+    sw $k1, 0($t1)
+    li $k1, 0
+    sw $k1, 0($t3)
+    li $k1, 0
+    sw $k1, 0($t2)
+    j sum_for_cond1
+
+sum_for_cond1:
+    lw $t4, 0($t2)
+    lw $t0, 0($t1)
+    bne $t0, $zero, sum_br_true_748658608
+    j sum_br_false_748658608
+
+sum_br_false_748658608:
+    j sum_for_follow4
+
+sum_br_true_748658608:
+    j sum_for_body2
+
+sum_for_body2:
+    lw $t4, 0($t3)
+    lw $t0, 0($t2)
+    li $t8, 0
+    move $v1, $t0
+    sll $v1, $v1, 2
+    addu $t8, $t8, $v1
+    lw $t0, -4($sp)
+    addu $t0, $t0, $t8
+    lw $t0, 0($t0)
+    addu $t0, $t4, $t0
+    sw $t0, 0($t3)
+    j sum_for_update3
+
+sum_for_update3:
+    lw $t0, 0($t2)
+    addiu $t0, $t0, 1
+    sw $t0, 0($t2)
+    j sum_for_cond1
+
+sum_for_follow4:
+    bne $t0, $zero, sum_br_true_546718765
+    j sum_br_false_546718765
+
+sum_br_false_546718765:
+    j sum_if_follow6
+
+sum_br_true_546718765:
+    j sum_if_then5
+
+sum_if_then5:
+    j sum_for_cond7
+
+sum_if_follow6:
+    lw $t0, 0($t3)
+    move $v0, $t0
+    jr $ra
+
+sum_for_cond7:
+    lw $t0, 0($t2)
+    lw $t3, 0($t1)
+    bne $t0, $zero, sum_br_true_167185492
+    j sum_br_false_167185492
+
+sum_br_false_167185492:
+    j sum_for_follow10
+
+sum_br_true_167185492:
+    j sum_for_body8
+
+sum_for_body8:
+    j sum_for_update9
+
+sum_for_update9:
+    lw $t0, 0($t2)
+    addiu $t0, $t0, 1
+    sw $t0, 0($t2)
+    j sum_for_cond7
+
+sum_for_follow10:
+    j sum_for_cond11
+
+sum_for_cond11:
+    j sum_for_body12
+
+sum_for_body12:
+    j sum_for_update13
+
+sum_for_update13:
+    lw $t0, 0($t2)
+    addiu $t0, $t0, 1
+    sw $t0, 0($t2)
+    j sum_for_cond11
+
+sum_for_follow14:
+    j sum_for_cond15
+
+sum_for_cond15:
+    j sum_for_body16
+
+sum_for_body16:
+    j sum_for_update17
+
+sum_for_update17:
+    j sum_for_cond15
+
+sum_for_follow18:
+    li $k1, 0
+    sw $k1, 0($t2)
+    j sum_for_cond19
+
+sum_for_cond19:
+    j sum_for_body20
+
+sum_for_body20:
+    j sum_for_update21
+
+sum_for_update21:
+    lw $t0, 0($t2)
+    addiu $t0, $t0, 1
+    sw $t0, 0($t2)
+    j sum_for_cond19
+
+sum_for_follow22:
+    j sum_for_cond23
+
+sum_for_cond23:
+    lw $t3, 0($t2)
+    lw $t0, 0($t1)
+    bne $t0, $zero, sum_br_true_592179046
+    j sum_br_false_592179046
+
+sum_br_false_592179046:
+    j sum_for_follow26
+
+sum_br_true_592179046:
+    j sum_for_body24
+
+sum_for_body24:
+    j sum_for_update25
+
+sum_for_update25:
+    j sum_for_cond23
+
+sum_for_follow26:
+    li $k1, 0
+    sw $k1, 0($t2)
+    j sum_for_cond27
+
+sum_for_cond27:
+    lw $t3, 0($t2)
+    lw $t0, 0($t1)
+    bne $t0, $zero, sum_br_true_1937348256
+    j sum_br_false_1937348256
+
+sum_br_false_1937348256:
+    j sum_for_follow30
+
+sum_br_true_1937348256:
+    j sum_for_body28
+
+sum_for_body28:
+    j sum_for_update29
+
+sum_for_update29:
+    j sum_for_cond27
+
+sum_for_follow30:
+    li $k1, 0
+    sw $k1, 0($t2)
+    j sum_for_cond31
+
+sum_for_cond31:
+    j sum_for_body32
+
+sum_for_body32:
+    j sum_for_update33
+
+sum_for_update33:
+    j sum_for_cond31
+
+sum_for_follow34:
+    li $k1, 0
+    sw $k1, 0($t2)
+    li $k1, 0
+    sw $k1, 0($t0)
+    j sum_for_cond35
+
+sum_for_cond35:
+    j sum_for_body36
+
+sum_for_body36:
+    j sum_for_update37
+
+sum_for_update37:
+    j sum_for_cond35
+
+sum_for_follow38:
+    bne $t0, $zero, sum_br_true_1641808846
+    j sum_br_false_1641808846
+
+sum_br_false_1641808846:
+    j sum_if_else41
+
+sum_br_true_1641808846:
+    j sum_if_then39
+
+sum_if_then39:
+    j sum_if_follow40
+
+sum_if_follow40:
+    li $k1, 1
+    sw $k1, 0($t2)
+    li $t0, -1
+    sw $t0, 0($t2)
+    li $t0, 2
+    li $k1, 0
+    subu $t0, $k1, $t0
+    sw $t0, 0($t2)
+    li $k1, 1
+    sw $k1, 0($t2)
+    j sum_if_follow6
+
+sum_if_else41:
+    j sum_if_follow40

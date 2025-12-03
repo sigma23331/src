@@ -15,10 +15,7 @@ import middle.component.model.*;
 import middle.component.model.Module;
 import middle.component.type.*; // 导入类型系统
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 
 import static backend.enums.AsmOp.AND;
@@ -39,6 +36,7 @@ public class MipsBuilder {
 
     private boolean isInMain = false; // 标记当前是否在 main 函数中 (影响 ret 指令的行为)
     private Function currentFunction; // 当前正在处理的函数
+    private List<Object> mipsInstructions = new ArrayList<>();
 
     // 2. 实现构造函数
     public MipsBuilder(Module module, boolean optimizeOn) {
@@ -58,6 +56,13 @@ public class MipsBuilder {
 
         // 初始化指令分发器
         initInstructionHandlers();
+    }
+
+    /**
+     * 将指令加入缓存列表
+     */
+    private void emit(Object asm) {
+        this.mipsInstructions.add(asm);
     }
 
     // 3. 注册所有指令的处理函数
@@ -140,8 +145,11 @@ public class MipsBuilder {
         }
         // 4.5 后端窥孔优化 (PeepHole)
         if (optimize) {
-            // PeepHole.run();
+            // 传入原始列表，获取优化后的新列表
+            this.mipsInstructions = backend.utils.PeepHole.run(this.mipsInstructions);
         }
+
+        MipsFile.getInstance().updateTextSegment(this.mipsInstructions);
     }
 
     // 5. 实现字符串常量生成
@@ -217,7 +225,7 @@ public class MipsBuilder {
         this.var2reg = optimizeOn ? new HashMap<>(function.getVar2reg()) : new HashMap<>();
 
         // 7.2 生成函数标签 (去掉 @ 前缀)
-        new Label(parseLabel(function.getName()));
+        emit(new Label(parseLabel(function.getName())));
 
         // 7.3 处理函数参数
         ArrayList<FuncParam> funcParams = function.getParams();
@@ -235,7 +243,7 @@ public class MipsBuilder {
                 Register argReg = Register.getByOffset(Register.A0, i);
 
                 // 【核心修改 B】：必须生成指令，把 $a0-$a3 的值存入栈中永久保存！
-                new MemAsm(AsmOp.SW, argReg, Register.SP, curStackOffset);
+                emit(new MemAsm(AsmOp.SW, argReg, Register.SP, curStackOffset));
 
                 // 【核心修改 C - 极为重要】：
                 // 绝对不要把 arg 放入 var2reg！
@@ -294,7 +302,7 @@ public class MipsBuilder {
         // 注意：currentFunction.getName() 带有 @，substring(1) 去掉它
         String labelName = parseLabel(currentFunction.getName()) + "_" + safeBlockName;
 
-        new Label(labelName);
+        emit(new Label(labelName));
 
         // 8.2 遍历并生成指令
         for (Instruction instruction : block.getInstructions()) {
@@ -339,12 +347,12 @@ public class MipsBuilder {
         Register destReg = var2reg.getOrDefault(allocInst, Register.K0);
 
         // 计算地址: destReg = $sp + curStackOffset
-        new CalcAsm(destReg, AsmOp.ADDIU, Register.SP, curStackOffset);
+        emit(new CalcAsm(destReg, AsmOp.ADDIU, Register.SP, curStackOffset));
 
         // 如果 AllocInst 溢出到栈上，将计算出的地址存回栈槽
         if (!var2reg.containsKey(allocInst)) {
             int allocInstOffset = var2Offset.get(allocInst);
-            new MemAsm(AsmOp.SW, Register.K0, Register.SP, allocInstOffset);
+            emit(new MemAsm(AsmOp.SW, Register.K0, Register.SP, allocInstOffset));
         }
     }
 
@@ -359,7 +367,7 @@ public class MipsBuilder {
             // 例子：load i32, i32* @count
             // MIPS: la $k0, count
             GlobalVar gVar = (GlobalVar) pointer;
-            new LaAsm(addrReg, parseLabel(gVar.getName()));
+            emit(new LaAsm(addrReg, parseLabel(gVar.getName())));
         } else if (var2reg.containsKey(pointer)) {
             // Case B: 指针变量在寄存器中
             // 例子：指针 %ptr 在 $t0 中
@@ -370,7 +378,7 @@ public class MipsBuilder {
             // 例子：指针 %ptr 存在栈的 -4($sp) 处
             // MIPS: lw $k0, -4($sp) -> 此时 $k0 拿到了指针的值(即目标地址)
             int offset = var2Offset.get(pointer);
-            new MemAsm(AsmOp.LW, addrReg, Register.SP, offset);
+            emit(new MemAsm(AsmOp.LW, addrReg, Register.SP, offset));
         }
 
         // 3. 执行加载操作: result = *addrReg
@@ -387,14 +395,14 @@ public class MipsBuilder {
         // 生成真正取值的指令
         // MIPS: lw $t1, 0($k0)  (如果 ptr 在 t0，就是 lw $t1, 0($t0))
         // 含义：去 $k0 指向的地址，读 4 字节放入 destReg
-        new MemAsm(AsmOp.LW, destReg, addrReg, 0);
+        emit(new MemAsm(AsmOp.LW, destReg, addrReg, 0));
 
         // 4. 如果结果需要存回栈 (溢出情况)
         if (!var2reg.containsKey(loadInst)) {
             // 例子：%val 对应的栈槽是 -8($sp)
             // MIPS: sw $k1, -8($sp)
             int instOffset = var2Offset.get(loadInst);
-            new MemAsm(AsmOp.SW, destReg, Register.SP, instOffset);
+            emit(new MemAsm(AsmOp.SW, destReg, Register.SP, instOffset));
         }
     }
 
@@ -407,14 +415,14 @@ public class MipsBuilder {
         if (pointer instanceof GlobalVar) {
             // Case: 全局变量 @g
             // MIPS: la $k0, g
-            new LaAsm(addrReg, parseLabel(pointer.getName()));
+            emit(new LaAsm(addrReg, parseLabel(pointer.getName())));
         } else if (var2reg.containsKey(pointer)) {
             // Case: 指针在 $t0
             addrReg = var2reg.get(pointer);
         } else {
             // Case: 指针在栈 -4($sp)
             // MIPS: lw $k0, -4($sp)
-            new MemAsm(AsmOp.LW, addrReg, Register.SP, var2Offset.get(pointer));
+            emit(new MemAsm(AsmOp.LW, addrReg, Register.SP, var2Offset.get(pointer)));
         }
 
         // 2. 准备数据寄存器 ($k1) - 把要存的值拿到 $k1
@@ -424,7 +432,7 @@ public class MipsBuilder {
             // 例子：store i32 5, ...
             // MIPS: li $k1, 5
             int imm = ((ConstInt) value).getValue();
-            new LiAsm(dataReg, imm);
+            emit(new LiAsm(dataReg, imm));
         } else if (var2reg.containsKey(value)) {
             // Case B: 值在寄存器 $t1
             // dataReg 直接引用 $t1
@@ -432,13 +440,13 @@ public class MipsBuilder {
         } else {
             // Case C: 值在栈上 -8($sp)
             // MIPS: lw $k1, -8($sp)
-            new MemAsm(AsmOp.LW, dataReg, Register.SP, var2Offset.get(value));
+            emit(new MemAsm(AsmOp.LW, dataReg, Register.SP, var2Offset.get(value)));
         }
 
         // 3. 执行存储
         // MIPS: sw $k1, 0($k0) (或者 sw $t1, 0($t0))
         // 含义：把 dataReg 的值写入 addrReg 指向的内存
-        new MemAsm(AsmOp.SW, dataReg, addrReg, 0);
+        emit(new MemAsm(AsmOp.SW, dataReg, addrReg, 0));
     }
 
     private void buildMoveInst(MoveInst moveInst) {
@@ -454,15 +462,15 @@ public class MipsBuilder {
             // Case: move %dst, 10
             // MIPS: li $t0, 10
             int imm = ((ConstInt) src).getValue();
-            new LiAsm(dstReg, imm);
+            emit(new LiAsm(dstReg, imm));
         } else if (var2reg.containsKey(src)) {
             // Case: move %dst, $t1
             // MIPS: move $t0, $t1
-            new MoveAsm(dstReg, var2reg.get(src));
+            emit(new MoveAsm(dstReg, var2reg.get(src)));
         } else {
             // Case: src 在栈上 -4($sp)
             // MIPS: lw $t0, -4($sp)
-            new MemAsm(AsmOp.LW, dstReg, Register.SP, var2Offset.get(src));
+            emit(new MemAsm(AsmOp.LW, dstReg, Register.SP, var2Offset.get(src)));
         }
 
         // 3. 如果目标原本是在栈上的 (溢出)
@@ -470,7 +478,7 @@ public class MipsBuilder {
             // 我们刚才把值暂存在了 $k0 (dstReg)
             // 现在把它刷回栈槽 -8($sp)
             // MIPS: sw $k0, -8($sp)
-            new MemAsm(AsmOp.SW, dstReg, Register.SP, var2Offset.get(dst));
+            emit(new MemAsm(AsmOp.SW, dstReg, Register.SP, var2Offset.get(dst)));
         }
     }
 
@@ -507,7 +515,7 @@ public class MipsBuilder {
         if (targetReg == Register.K0) {
             // 例子：结果在栈偏移 -12($sp)
             // MIPS: sw $k0, -12($sp)
-            new MemAsm(AsmOp.SW,targetReg,Register.SP,var2Offset.get(binaryInst));
+            emit(new MemAsm(AsmOp.SW,targetReg,Register.SP,var2Offset.get(binaryInst)));
         }
     }
 
@@ -530,7 +538,7 @@ public class MipsBuilder {
             case SREM -> result = v1 % v2;
         }
 
-        new LiAsm(targetReg,result);
+        emit(new LiAsm(targetReg,result));
     }
 
     private void makeOneConst(BinaryInst binaryInst, Register targetReg) {
@@ -553,7 +561,7 @@ public class MipsBuilder {
             }
             else {
                 varReg = Register.K0;
-                new MemAsm(AsmOp.LW,varReg,Register.SP,var2Offset.get(value)); //先存k0里
+                emit(new MemAsm(AsmOp.LW,varReg,Register.SP,var2Offset.get(value))); //先存k0里
             }
         } else {
             // 情况 B: 变量 op 常量 (例如: a - 100)
@@ -566,7 +574,7 @@ public class MipsBuilder {
                 varReg = var2reg.get(var);
             } else {
                 varReg = Register.K0;
-                new MemAsm(AsmOp.LW, varReg, Register.SP, var2Offset.get(var));
+                emit(new MemAsm(AsmOp.LW, varReg, Register.SP, var2Offset.get(var)));
             }
         }
 
@@ -577,7 +585,7 @@ public class MipsBuilder {
         // 例子: a = b + 10
         // MIPS: addiu $t2, $t1, 10
         if (binaryInst.getOpCode() == BinaryOpCode.ADD) {
-            new CalcAsm(targetReg,AsmOp.ADDIU,varReg,imm);
+            emit(new CalcAsm(targetReg,AsmOp.ADDIU,varReg,imm));
         }
 
         // Branch 2: 减法 (SUB)
@@ -586,12 +594,12 @@ public class MipsBuilder {
         if (binaryInst.getOpCode() == BinaryOpCode.SUB) {
             if (constIsFirst) {
                 // 必须用 subu，不能用 addiu。所以要把 100 先加载到寄存器
-                new LiAsm(Register.K1, imm); // $k1 = 100
-                new CalcAsm(targetReg, AsmOp.SUBU, Register.K1, varReg);
+                emit(new LiAsm(Register.K1, imm)); // $k1 = 100
+                emit(new CalcAsm(targetReg, AsmOp.SUBU, Register.K1, varReg));
             }
             else {
                 // 可以看作 a + (-100)，直接用 addiu 优化
-                new CalcAsm(targetReg, AsmOp.ADDIU, varReg, -imm);
+                emit(new CalcAsm(targetReg, AsmOp.ADDIU, varReg, -imm));
             }
         }
 
@@ -605,7 +613,7 @@ public class MipsBuilder {
             int power = getPowerOfTwo(imm); // 我们可以写个小辅助方法，或者直接在这里判断
             if (power != -1) {
                 // 例子: a * 8  ->  a << 3
-                new CalcAsm(targetReg, AsmOp.SLL, varReg, power);
+                emit(new CalcAsm(targetReg, AsmOp.SLL, varReg, power));
             } else {
                 // 普通乘法: 必须先把立即数 li 到寄存器
                 makeVarMulConst(varReg,imm,targetReg);
@@ -618,41 +626,45 @@ public class MipsBuilder {
         // MIPS: li $at, 10; div $t1, $at; mflo $t2
         // Branch 4: 除法/取模 (SDIV/SREM)
         if (binaryInst.getOpCode() == BinaryOpCode.SDIV) {
-            // 【优化逻辑开始】
-            // 只有当：1. 除数是常量 (即 !constIsFirst) 2. 且除数不为0 时，才能优化
-            // 例子: a / 10 (优化√), 10 / a (不优化×)
+            // 【核心修改点】集成除法优化
+            // 只有当：1.除数是常量 2.除数不为0 3.开启优化 时，才使用魔数优化
             if (!constIsFirst && imm != 0 && optimizeOn) {
-                // 调用外部的优化工具类
-                // 注意：varReg 是被除数所在的寄存器，imm 是除数(常量)，targetReg 是目标寄存器
-                backend.utils.OptimizedDivision.emitDivOptimization(varReg, imm, targetReg);
+                // 调用下面定义的私有方法
+                emitDivOptimization(varReg, imm, targetReg);
             }
             else {
-                // 【原有逻辑保持不变】
-
-                new LiAsm(Register.K1, imm); // 把立即数加载到 K1
-
+                // 原有逻辑：普通除法
+                emit(new LiAsm(Register.K1, imm));
                 if (constIsFirst) {
-                    // Case: 100 / a -> div $k1, varReg
-                    new MulDivAsm(Register.K1, AsmOp.DIV, varReg);
+                    emit(new MulDivAsm(Register.K1, AsmOp.DIV, varReg));
                 } else {
-                    // Case: a / 100 (如果不满足优化条件会走这里) -> div varReg, $k1
-                    new MulDivAsm(varReg, AsmOp.DIV, Register.K1);
+                    emit(new MulDivAsm(varReg, AsmOp.DIV, Register.K1));
                 }
-                // 结果在 LO 寄存器，取出来
-                new MDRegAsm(AsmOp.MFLO, targetReg);
+                emit(new MDRegAsm(AsmOp.MFLO, targetReg));
             }
+        }
+        else if (binaryInst.getOpCode() == BinaryOpCode.SREM) {
+            // 取模优化相对复杂，通常依赖除法优化算出商，再用 a - (a/b)*b 算余数
+            // 这里暂时保持原逻辑，或者你可以手动实现：Rem = a - (DivOpt(a, b) * b)
+            emit(new LiAsm(Register.K1, imm));
+            if (constIsFirst) {
+                emit(new MulDivAsm(Register.K1, AsmOp.DIV, varReg));
+            } else {
+                emit(new MulDivAsm(varReg, AsmOp.DIV, Register.K1));
+            }
+            emit(new MDRegAsm(AsmOp.MFHI, targetReg));
         }
 
         if (binaryInst.getOpCode() == BinaryOpCode.SREM) {
-            new LiAsm(Register.K1, imm);
+            emit(new LiAsm(Register.K1, imm));
 
             if (constIsFirst) {
-                new MulDivAsm(Register.K1, AsmOp.DIV, varReg);
+                emit(new MulDivAsm(Register.K1, AsmOp.DIV, varReg));
             } else {
-                new MulDivAsm(varReg, AsmOp.DIV, Register.K1);
+                emit(new MulDivAsm(varReg, AsmOp.DIV, Register.K1));
             }
             // 结果在 HI 寄存器，取出来
-            new MDRegAsm(AsmOp.MFHI, targetReg);
+            emit(new MDRegAsm(AsmOp.MFHI, targetReg));
         }
     }
 
@@ -666,7 +678,7 @@ public class MipsBuilder {
             reg1 = var2reg.get(op1);
         } else {
             reg1 = Register.K0;
-            new MemAsm(AsmOp.LW, reg1, Register.SP, var2Offset.get(op1));
+            emit(new MemAsm(AsmOp.LW, reg1, Register.SP, var2Offset.get(op1)));
         }
 
         Register reg2;
@@ -675,42 +687,42 @@ public class MipsBuilder {
         } else {
             // 注意：如果 reg1 用了 K0，这里必须用 K1，否则会覆盖 reg1
             reg2 = Register.K1;
-            new MemAsm(AsmOp.LW, reg2, Register.SP, var2Offset.get(op2));
+            emit(new MemAsm(AsmOp.LW, reg2, Register.SP, var2Offset.get(op2)));
         }
 
         // 2. 生成指令
         switch (binaryInst.getOpCode()) {
             case ADD:
                 // R-Type: addu rd, rs, rt
-                new CalcAsm(targetReg, AsmOp.ADDU, reg1, reg2);
+                emit(new CalcAsm(targetReg, AsmOp.ADDU, reg1, reg2));
                 break;
 
             case SUB:
                 // R-Type: subu rd, rs, rt
-                new CalcAsm(targetReg, AsmOp.SUBU, reg1, reg2);
+                emit(new CalcAsm(targetReg, AsmOp.SUBU, reg1, reg2));
                 break;
 
             case MUL:
                 // R-Type: mul rd, rs, rt (伪指令，写回通用寄存器)
                 // 这里使用 CalcAsm，因为结果直接进 targetReg
-                // new MulDivAsm(reg1, AsmOp.MULT, reg2);
-                // new MDRegAsm(AsmOp.MFLO, targetReg);
-                new CalcAsm(targetReg,MUL,reg1,reg2);
+                // emit(new MulDivAsm(reg1, AsmOp.MULT, reg2);
+                // emit(new MDRegAsm(AsmOp.MFLO, targetReg);
+                emit(new CalcAsm(targetReg,MUL,reg1,reg2));
                 break;
 
             case SDIV:
                 // Div: div rs, rt (结果进 HI/LO)
                 // 这里使用 MulDivAsm
-                new MulDivAsm(reg1, AsmOp.DIV, reg2);
+                emit(new MulDivAsm(reg1, AsmOp.DIV, reg2));
                 // 取商: mflo rd
-                new MDRegAsm(AsmOp.MFLO, targetReg);
+                emit(new MDRegAsm(AsmOp.MFLO, targetReg));
                 break;
 
             case SREM:
                 // Rem: div rs, rt
-                new MulDivAsm(reg1, AsmOp.DIV, reg2);
+                emit(new MulDivAsm(reg1, AsmOp.DIV, reg2));
                 // 取余: mfhi rd
-                new MDRegAsm(AsmOp.MFHI, targetReg);
+                emit(new MDRegAsm(AsmOp.MFHI, targetReg));
                 break;
 
             // 可以在这里补充 AND, OR, XOR 等逻辑运算(binaryopcode里没有）
@@ -726,15 +738,15 @@ public class MipsBuilder {
 
     private void makeVarMulConst(Register varReg, int constInt, Register targetReg) {
         if (constInt == 0) {
-            new LiAsm(targetReg, 0);
+            emit(new LiAsm(targetReg, 0));
             return;
         }
         if (constInt == 1) {
-            new MoveAsm(targetReg, varReg);
+            emit(new MoveAsm(targetReg, varReg));
             return;
         }
         if (constInt == -1) {
-            new NegAsm(targetReg, varReg);
+             emit(new NegAsm(targetReg, varReg));
             return;
         }
         boolean isNegative = constInt < 0;
@@ -744,34 +756,34 @@ public class MipsBuilder {
         // ... (这部分的 switch-case 保持不变，因为移位指令如 sll 是合法的 R-Type) ...
         switch (absConstInt) {
             case 2:
-                new CalcAsm(targetReg, AsmOp.ADDU, varReg, varReg);
+                emit(new CalcAsm(targetReg, AsmOp.ADDU, varReg, varReg));
                 break;
             case 3:
-                new CalcAsm(Register.V0, AsmOp.ADDU, varReg, varReg);
-                new CalcAsm(targetReg, AsmOp.ADDU, Register.V0, varReg);
+                emit(new CalcAsm(Register.V0, AsmOp.ADDU, varReg, varReg));
+                emit(new CalcAsm(targetReg, AsmOp.ADDU, Register.V0, varReg));
                 break;
             case 4:
-                new CalcAsm(targetReg, AsmOp.SLL, varReg, 2);
+                emit(new CalcAsm(targetReg, AsmOp.SLL, varReg, 2));
                 break;
             case 5:
-                new CalcAsm(Register.V0, AsmOp.SLL, varReg, 2);
-                new CalcAsm(targetReg, AsmOp.ADDU, Register.V0, varReg);
+                emit(new CalcAsm(Register.V0, AsmOp.SLL, varReg, 2));
+                emit(new CalcAsm(targetReg, AsmOp.ADDU, Register.V0, varReg));
                 break;
             case 6:
-                new CalcAsm(Register.V0, AsmOp.SLL, varReg, 2);
-                new CalcAsm(Register.V1, AsmOp.ADDU, varReg, varReg);
-                new CalcAsm(targetReg, AsmOp.ADDU, Register.V0, Register.V1);
+                emit(new CalcAsm(Register.V0, AsmOp.SLL, varReg, 2));
+                emit(new CalcAsm(Register.V1, AsmOp.ADDU, varReg, varReg));
+                emit(new CalcAsm(targetReg, AsmOp.ADDU, Register.V0, Register.V1));
                 break;
             case 7:
-                new CalcAsm(Register.V0, AsmOp.SLL, varReg, 3);
-                new CalcAsm(targetReg, AsmOp.SUBU, Register.V0, varReg);
+                emit(new CalcAsm(Register.V0, AsmOp.SLL, varReg, 3));
+                emit(new CalcAsm(targetReg, AsmOp.SUBU, Register.V0, varReg));
                 break;
             case 8:
-                new CalcAsm(targetReg, AsmOp.SLL, varReg, 3);
+                emit(new CalcAsm(targetReg, AsmOp.SLL, varReg, 3));
                 break;
             case 9:
-                new CalcAsm(Register.V0, AsmOp.SLL, varReg, 3);
-                new CalcAsm(targetReg, AsmOp.ADDU, Register.V0, varReg);
+                emit(new CalcAsm(Register.V0, AsmOp.SLL, varReg, 3));
+                emit(new CalcAsm(targetReg, AsmOp.ADDU, Register.V0, varReg));
                 break;
             default:
                 int bitCnt = Integer.bitCount(absConstInt);
@@ -787,25 +799,25 @@ public class MipsBuilder {
                         }
                     }
                     if (bitCnt == 1) {
-                        new CalcAsm(targetReg, AsmOp.SLL, varReg, shifts[0]);
+                        emit(new CalcAsm(targetReg, AsmOp.SLL, varReg, shifts[0]));
                     } else {
-                        new CalcAsm(Register.V0, AsmOp.SLL, varReg, shifts[0]);
-                        new CalcAsm(Register.V1, AsmOp.SLL, varReg, shifts[1]);
-                        new CalcAsm(targetReg, AsmOp.ADDU, Register.V0, Register.V1);
+                        emit(new CalcAsm(Register.V0, AsmOp.SLL, varReg, shifts[0]));
+                        emit(new CalcAsm(Register.V1, AsmOp.SLL, varReg, shifts[1]));
+                        emit(new CalcAsm(targetReg, AsmOp.ADDU, Register.V0, Register.V1));
                     }
                 } else {
                     // 【关键修改点】 对于其他情况，使用标准乘法 MULT
 
                     // 1. 将绝对值常量加载到临时寄存器 V0
-                    new LiAsm(Register.V0, absConstInt);
+                    emit(new LiAsm(Register.V0, absConstInt));
 
                     // 2. 使用 MUL 指令
-                    new CalcAsm(targetReg, AsmOp.MUL, varReg, Register.V0);
+                    emit(new CalcAsm(targetReg, AsmOp.MUL, varReg, Register.V0));
                 }
         }
 
         if (isNegative) {
-            new NegAsm(targetReg, targetReg);
+             emit(new NegAsm(targetReg, targetReg));
         }
     }
 
@@ -819,7 +831,7 @@ public class MipsBuilder {
                 targetBlock.getName().replace(".", "_");
 
         // 3. 生成跳转指令: j label
-        new JumpAsm(AsmOp.J, blockLabel);
+        emit(new JumpAsm(AsmOp.J, blockLabel));
     }
 
     private void buildCondBrInst(BrInst brInst) {
@@ -847,11 +859,11 @@ public class MipsBuilder {
             // 加载 op1 到寄存器
             Register reg1 = Register.K0;
             if (op1 instanceof ConstInt) {
-                new LiAsm(reg1, ((ConstInt) op1).getValue());
+                emit(new LiAsm(reg1, ((ConstInt) op1).getValue()));
             } else if (var2reg.containsKey(op1)) {
                 reg1 = var2reg.get(op1);
             } else {
-                new MemAsm(AsmOp.LW, reg1, Register.SP, var2Offset.get(op1));
+                emit(new MemAsm(AsmOp.LW, reg1, Register.SP, var2Offset.get(op1)));
             }
 
             // 加载/准备 op2
@@ -866,7 +878,7 @@ public class MipsBuilder {
                 if (var2reg.containsKey(op2)) {
                     reg2 = var2reg.get(op2);
                 } else {
-                    new MemAsm(AsmOp.LW, reg2, Register.SP, var2Offset.get(op2));
+                    emit(new MemAsm(AsmOp.LW, reg2, Register.SP, var2Offset.get(op2)));
                 }
             }
 
@@ -885,10 +897,10 @@ public class MipsBuilder {
             // 3.3 生成条件跳转指令 (跳到 True Block)
             if (op2IsConst) {
                 // 优化：利用立即数比较 (beq $t0, 100, label)
-                new BrAsm(trueLabel, reg1, asmOp, immVal);
+                emit(new BrAsm(trueLabel, reg1, asmOp, immVal));
             } else {
                 // 标准：寄存器比较 (beq $t0, $t1, label)
-                new BrAsm(trueLabel, reg1, asmOp, reg2);
+                emit(new BrAsm(trueLabel, reg1, asmOp, reg2));
             }
 
         } else {
@@ -899,16 +911,16 @@ public class MipsBuilder {
             if (var2reg.containsKey(cond)) {
                 condReg = var2reg.get(cond);
             } else {
-                new MemAsm(AsmOp.LW, condReg, Register.SP, var2Offset.get(cond));
+                emit(new MemAsm(AsmOp.LW, condReg, Register.SP, var2Offset.get(cond)));
             }
 
             // 生成: bne $cond, $zero, trueLabel
-            new BrAsm(trueLabel, condReg, AsmOp.BNE, Register.ZERO);
+            emit(new BrAsm(trueLabel, condReg, AsmOp.BNE, Register.ZERO));
         }
 
         // 5. 无条件跳转到 False Block (Fall-through 的替代)
         // 如果上面的 Branch 没跳走，就继续执行这一句跳去 False
-        new JumpAsm(AsmOp.J, falseLabel);
+        emit(new JumpAsm(AsmOp.J, falseLabel));
     }
 
     private void buildIcmp(BinaryInst binaryInst) {
@@ -935,20 +947,20 @@ public class MipsBuilder {
         // 2.1 准备操作数寄存器 (reg1, reg2)
         Register reg1 = Register.K0;
         if (op1 instanceof ConstInt) {
-            new LiAsm(reg1, ((ConstInt) op1).getValue());
+            emit(new LiAsm(reg1, ((ConstInt) op1).getValue()));
         } else if (var2reg.containsKey(op1)) {
             reg1 = var2reg.get(op1);
         } else {
-            new MemAsm(AsmOp.LW, reg1, Register.SP, var2Offset.get(op1));
+            emit(new MemAsm(AsmOp.LW, reg1, Register.SP, var2Offset.get(op1)));
         }
 
         Register reg2 = Register.K1;
         if (op2 instanceof ConstInt) {
-            new LiAsm(reg2, ((ConstInt) op2).getValue());
+            emit(new LiAsm(reg2, ((ConstInt) op2).getValue()));
         } else if (var2reg.containsKey(op2)) {
             reg2 = var2reg.get(op2);
         } else {
-            new MemAsm(AsmOp.LW, reg2, Register.SP, var2Offset.get(op2));
+            emit(new MemAsm(AsmOp.LW, reg2, Register.SP, var2Offset.get(op2)));
         }
 
         // 2.2 确定目标寄存器
@@ -969,11 +981,11 @@ public class MipsBuilder {
 
         // 2.4 生成比较指令
         // MIPS: seq $t0, $t1, $t2  (if t1==t2 then t0=1 else t0=0)
-        new CmpAsm(targetReg, asmOp, reg1, reg2);
+        emit(new CmpAsm(targetReg, asmOp, reg1, reg2));
 
         // 2.5 溢出处理
         if (targetReg == Register.K0) {
-            new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(binaryInst));
+            emit(new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(binaryInst)));
         }
     }
 
@@ -983,8 +995,8 @@ public class MipsBuilder {
         if (isInMain) {
             // MIPS: li $v0, 10
             //       syscall
-            new LiAsm(Register.V0,10);
-            new SyscallAsm();
+            emit(new LiAsm(Register.V0,10));
+            emit(new SyscallAsm());
             return;
         }
 
@@ -997,21 +1009,21 @@ public class MipsBuilder {
             if (retVal instanceof ConstInt) {
                 // Case A: 返回常量
                 // MIPS: li $v0, imm
-                new LiAsm(Register.V0,((ConstInt)retVal).getValue());
+                emit(new LiAsm(Register.V0,((ConstInt)retVal).getValue()));
             } else if (var2reg.containsKey(retVal)) {
                 // Case B: 返回值在寄存器中
                 // MIPS: move $v0, $reg
-                new MoveAsm(Register.V0,var2reg.get(retVal));
+                emit(new MoveAsm(Register.V0,var2reg.get(retVal)));
             } else {
                 // Case C: 返回值在栈上
                 // MIPS: lw $v0, offset($sp)
-                new MemAsm(AsmOp.LW,Register.V0,Register.SP,var2Offset.get(retVal));
+                emit(new MemAsm(AsmOp.LW,Register.V0,Register.SP,var2Offset.get(retVal)));
             }
         }
 
         // 3. 跳转回调用者
         // MIPS: jr $ra
-        new JumpAsm(AsmOp.JR,Register.RA);
+        emit(new JumpAsm(AsmOp.JR,Register.RA));
     }
 
     private void buildCallInst(CallInst callInst) {
@@ -1031,13 +1043,13 @@ public class MipsBuilder {
         // 2. 保存这些寄存器到栈上
         for (Register reg : savedRegs) {
             curStackOffset -= 4;
-            new MemAsm(AsmOp.SW, reg, Register.SP, curStackOffset);
+            emit(new MemAsm(AsmOp.SW, reg, Register.SP, curStackOffset));
         }
 
         // 3. 保存 $ra
         curStackOffset -= 4;
         int raOffset = curStackOffset;
-        new MemAsm(AsmOp.SW, Register.RA, Register.SP, raOffset);
+        emit(new MemAsm(AsmOp.SW, Register.RA, Register.SP, raOffset));
 
         // 4. 准备参数
         Function targetFunc = (Function) callInst.getOperand(0);
@@ -1050,11 +1062,11 @@ public class MipsBuilder {
                 // 前 4 个参数 -> 寄存器
                 Register argReg = Register.getByOffset(Register.A0, i);
                 if (arg instanceof ConstInt) {
-                    new LiAsm(argReg, ((ConstInt) arg).getValue());
+                    emit(new LiAsm(argReg, ((ConstInt) arg).getValue()));
                 } else if (var2reg.containsKey(arg)) {
-                    new MoveAsm(argReg, var2reg.get(arg));
+                    emit(new MoveAsm(argReg, var2reg.get(arg)));
                 } else {
-                    new MemAsm(AsmOp.LW, argReg, Register.SP, var2Offset.get(arg));
+                    emit(new MemAsm(AsmOp.LW, argReg, Register.SP, var2Offset.get(arg)));
                 }
             } else {
                 // 栈参数：存放在 RA 下方
@@ -1062,13 +1074,13 @@ public class MipsBuilder {
                 Register temp = Register.K0;
 
                 if (arg instanceof ConstInt) {
-                    new LiAsm(temp, ((ConstInt) arg).getValue());
+                    emit(new LiAsm(temp, ((ConstInt) arg).getValue()));
                 } else if (var2reg.containsKey(arg)) {
                     temp = var2reg.get(arg);
                 } else {
-                    new MemAsm(AsmOp.LW, temp, Register.SP, var2Offset.get(arg));
+                    emit(new MemAsm(AsmOp.LW, temp, Register.SP, var2Offset.get(arg)));
                 }
-                new MemAsm(AsmOp.SW, temp, Register.SP, paramOffset);
+                emit(new MemAsm(AsmOp.SW, temp, Register.SP, paramOffset));
             }
         }
 
@@ -1078,15 +1090,15 @@ public class MipsBuilder {
 
         // SP 下降：覆盖当前栈帧 + 保存的寄存器 + RA + 栈参数
         // 注意：curStackOffset 此时已经包含了 savedRegs 和 RA
-        new CalcAsm(Register.SP, AsmOp.ADDIU, Register.SP, curStackOffset - stackSpaceForArgs);
+        emit(new CalcAsm(Register.SP, AsmOp.ADDIU, Register.SP, curStackOffset - stackSpaceForArgs));
 
-        new JumpAsm(AsmOp.JAL, parseLabel(targetFunc.getName()));
+        emit(new JumpAsm(AsmOp.JAL, parseLabel(targetFunc.getName())));
 
         // 6. 恢复 SP
-        new CalcAsm(Register.SP, AsmOp.ADDIU, Register.SP, -(curStackOffset - stackSpaceForArgs));
+        emit(new CalcAsm(Register.SP, AsmOp.ADDIU, Register.SP, -(curStackOffset - stackSpaceForArgs)));
 
         // 7. 恢复 $ra
-        new MemAsm(AsmOp.LW, Register.RA, Register.SP, raOffset);
+        emit(new MemAsm(AsmOp.LW, Register.RA, Register.SP, raOffset));
         curStackOffset += 4; // 逻辑弹栈 RA
 
         // 8. 【关键修复】恢复 Caller-Saved 寄存器 (倒序)
@@ -1094,16 +1106,16 @@ public class MipsBuilder {
         int tempOffset = raOffset;
         for (int i = savedRegs.size() - 1; i >= 0; i--) {
             tempOffset += 4; // 往回找上一个存的位置
-            new MemAsm(AsmOp.LW, savedRegs.get(i), Register.SP, tempOffset);
+            emit(new MemAsm(AsmOp.LW, savedRegs.get(i), Register.SP, tempOffset));
         }
         curStackOffset += (savedRegs.size() * 4); // 逻辑弹栈 Regs
 
         // 9. 处理返回值
         if (!(callInst.getType() instanceof VoidType)) {
             Register targetReg = var2reg.getOrDefault(callInst, Register.K0);
-            new MoveAsm(targetReg, Register.V0);
+            emit(new MoveAsm(targetReg, Register.V0));
             if (targetReg == Register.K0) {
-                new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(callInst));
+                emit(new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(callInst)));
             }
         }
     }
@@ -1135,7 +1147,7 @@ public class MipsBuilder {
         // 1. 先计算所有索引的总偏移量，存入 $t8
         // 这样可以确保在覆盖 targetReg 之前，所有索引值都已被读取
         Register totalOffsetReg = Register.T8;
-        new LiAsm(totalOffsetReg, 0); // init offset = 0
+        emit(new LiAsm(totalOffsetReg, 0)); // init offset = 0
 
         for (int i = 1; i < gepInst.getNumOperands(); i++) {
             Value index = gepInst.getOperand(i);
@@ -1146,20 +1158,20 @@ public class MipsBuilder {
             if (index instanceof ConstInt) {
                 int val = ((ConstInt) index).getValue();
                 if (val == 0) continue;
-                new LiAsm(currIdxReg, val);
+                emit(new LiAsm(currIdxReg, val));
             } else if (var2reg.containsKey(index)) {
-                new MoveAsm(currIdxReg, var2reg.get(index));
+                emit(new MoveAsm(currIdxReg, var2reg.get(index)));
             } else {
                 Integer offset = var2Offset.get(index);
                 if (offset == null) throw new RuntimeException("GEP index missing");
-                new MemAsm(AsmOp.LW, currIdxReg, Register.SP, offset);
+                emit(new MemAsm(AsmOp.LW, currIdxReg, Register.SP, offset));
             }
 
             // currIdx * 4
-            new CalcAsm(currIdxReg, AsmOp.SLL, currIdxReg, 2);
+            emit(new CalcAsm(currIdxReg, AsmOp.SLL, currIdxReg, 2));
 
             // totalOffset += currIdxOffset
-            new CalcAsm(totalOffsetReg, AsmOp.ADDU, totalOffsetReg, currIdxReg);
+            emit(new CalcAsm(totalOffsetReg, AsmOp.ADDU, totalOffsetReg, currIdxReg));
         }
 
         // 2. 现在可以安全地加载基地址到 targetReg 了
@@ -1168,25 +1180,25 @@ public class MipsBuilder {
         if (basePointer instanceof GlobalVar || basePointer instanceof ConstString) {
             // 全局变量/常量：la targetReg, label
             String label = parseLabel(basePointer.getName());
-            new LaAsm(targetReg, label);
+            emit(new LaAsm(targetReg, label));
         } else if (var2reg.containsKey(basePointer)) {
             // 寄存器：move targetReg, baseReg
-            new MoveAsm(targetReg, var2reg.get(basePointer));
+            emit(new MoveAsm(targetReg, var2reg.get(basePointer)));
         } else {
             // 栈：lw targetReg, offset($sp)
             Integer offset = var2Offset.get(basePointer);
             if (offset == null) throw new RuntimeException("GEP base missing");
-            new MemAsm(AsmOp.LW, targetReg, Register.SP, offset);
+            emit(new MemAsm(AsmOp.LW, targetReg, Register.SP, offset));
         }
 
         // 3. 最终相加：Result = Base + TotalOffset
-        new CalcAsm(targetReg, AsmOp.ADDU, targetReg, totalOffsetReg);
+        emit(new CalcAsm(targetReg, AsmOp.ADDU, targetReg, totalOffsetReg));
 
         // 4. 溢出处理
         if (!var2reg.containsKey(gepInst)) {
             Integer offset = var2Offset.get(gepInst);
             if (offset != null) {
-                new MemAsm(AsmOp.SW, targetReg, Register.SP, offset);
+                emit(new MemAsm(AsmOp.SW, targetReg, Register.SP, offset));
             }
         }
     }
@@ -1195,16 +1207,16 @@ public class MipsBuilder {
 
     private void buildGetintInst(GetintInst inst) {
         // 1. 系统调用 5 (read_int)
-        new LiAsm(Register.V0, 5);
-        new SyscallAsm();
+        emit(new LiAsm(Register.V0, 5));
+        emit(new SyscallAsm());
 
         // 2. 将读入的结果 ($v0) 存入目标变量
         if (var2reg.containsKey(inst)) {
             // 目标在寄存器: move $reg, $v0
-            new MoveAsm(var2reg.get(inst), Register.V0);
+            emit(new MoveAsm(var2reg.get(inst), Register.V0));
         } else {
             // 目标在栈上: sw $v0, offset($sp)
-            new MemAsm(AsmOp.SW, Register.V0, Register.SP, var2Offset.get(inst));
+            emit(new MemAsm(AsmOp.SW, Register.V0, Register.SP, var2Offset.get(inst)));
         }
     }
 
@@ -1213,16 +1225,16 @@ public class MipsBuilder {
         Value val = inst.getOperand(1); // 假设 getOperand(0) 是要输出的值
 
         if (val instanceof ConstInt) {
-            new LiAsm(Register.A0, ((ConstInt) val).getValue());
+            emit(new LiAsm(Register.A0, ((ConstInt) val).getValue()));
         } else if (var2reg.containsKey(val)) {
-            new MoveAsm(Register.A0, var2reg.get(val));
+            emit(new MoveAsm(Register.A0, var2reg.get(val)));
         } else {
-            new MemAsm(AsmOp.LW, Register.A0, Register.SP, var2Offset.get(val));
+            emit(new MemAsm(AsmOp.LW, Register.A0, Register.SP, var2Offset.get(val)));
         }
 
         // 2. 系统调用 1 (print_int)
-        new LiAsm(Register.V0, 1);
-        new SyscallAsm();
+        emit(new LiAsm(Register.V0, 1));
+        emit(new SyscallAsm());
     }
 
     private void buildPutstrInst(PutstrInst inst) {
@@ -1243,7 +1255,7 @@ public class MipsBuilder {
             }
 
             // 加载地址: la $a0, label
-            new LaAsm(Register.A0, labelName);
+            emit(new LaAsm(Register.A0, labelName));
 
         } else {
             // --- 情况 B: 传入的是一个指针变量，例如 %v0 (通用路径) ---
@@ -1252,7 +1264,7 @@ public class MipsBuilder {
 
             if (var2reg.containsKey(val)) {
                 // 地址已经在寄存器里了 -> move $a0, $reg
-                new MoveAsm(Register.A0, var2reg.get(val));
+                emit(new MoveAsm(Register.A0, var2reg.get(val)));
             } else {
                 // 地址溢出在栈上 -> lw $a0, offset($sp)
                 // 注意：这里必须加非空检查，防止像之前 GEP 那样报空指针
@@ -1260,13 +1272,13 @@ public class MipsBuilder {
                 if (offset == null) {
                     throw new RuntimeException("Putstr error: String pointer not found. Val=" + val.getName());
                 }
-                new MemAsm(AsmOp.LW, Register.A0, Register.SP, offset);
+                emit(new MemAsm(AsmOp.LW, Register.A0, Register.SP, offset));
             }
         }
 
         // 4. 系统调用 4 (print_string)
-        new LiAsm(Register.V0, 4);
-        new SyscallAsm();
+        emit(new LiAsm(Register.V0, 4));
+        emit(new SyscallAsm());
     }
 
     private void buildTruncInst(TruncInst inst) {
@@ -1277,7 +1289,7 @@ public class MipsBuilder {
         if (var2reg.containsKey(src)) {
             srcReg = var2reg.get(src);
         } else {
-            new MemAsm(AsmOp.LW, srcReg, Register.SP, var2Offset.get(src));
+            emit(new MemAsm(AsmOp.LW, srcReg, Register.SP, var2Offset.get(src)));
         }
 
         // 2. 准备目标寄存器
@@ -1294,11 +1306,11 @@ public class MipsBuilder {
         }
 
         // 4. 执行截断: andi target, src, mask
-        new CalcAsm(targetReg, AsmOp.ANDI, srcReg, mask);
+        emit(new CalcAsm(targetReg, AsmOp.ANDI, srcReg, mask));
 
         // 5. 溢出处理
         if (!var2reg.containsKey(inst)) {
-            new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(inst));
+            emit(new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(inst)));
         }
     }
 
@@ -1312,16 +1324,16 @@ public class MipsBuilder {
 
         // 1. 加载/移动源操作数到目标
         if (src instanceof ConstInt) {
-            new LiAsm(targetReg, ((ConstInt) src).getValue());
+            emit(new LiAsm(targetReg, ((ConstInt) src).getValue()));
         } else if (var2reg.containsKey(src)) {
-            new MoveAsm(targetReg, var2reg.get(src));
+            emit(new MoveAsm(targetReg, var2reg.get(src)));
         } else {
-            new MemAsm(AsmOp.LW, targetReg, Register.SP, var2Offset.get(src));
+            emit(new MemAsm(AsmOp.LW, targetReg, Register.SP, var2Offset.get(src)));
         }
 
         // 2. 溢出处理
         if (!var2reg.containsKey(inst)) {
-            new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(inst));
+            emit(new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(inst)));
         }
     }
 
@@ -1332,5 +1344,121 @@ public class MipsBuilder {
         // 2. 替换非法字符 (如 . 替换为 _)
         // @test.x0 -> test_x0
         return name.replace(".", "_");
+    }
+
+
+
+
+    private void emitDivOptimization(Register src, int divisor, Register dst) {
+        // 1. 处理特殊边界情况
+        if (divisor == 1) {
+            emit(new MoveAsm(dst, src));
+            return;
+        }
+        if (divisor == -1) {
+            emit(new NegAsm(dst, src));
+            return;
+        }
+
+        int absDivisor = Math.abs(divisor);
+        boolean isNegative = (divisor < 0);
+
+        // 2. 检查是否为 2 的幂次
+        if ((absDivisor & (absDivisor - 1)) == 0) {
+            emitPowerOfTwoDiv(src, absDivisor, dst);
+        } else {
+            // 3. 通用情况：计算魔数并生成指令
+            emitGeneralDiv(src, absDivisor, dst);
+        }
+
+        // 4. 如果原除数是负数，结果取反
+        if (isNegative) {
+            emit(new NegAsm(dst, dst));
+        }
+    }
+
+    /**
+     * 针对除数是 2 的幂次的优化
+     */
+    private void emitPowerOfTwoDiv(Register src, int absDiv, Register dst) {
+        int shiftBits = Integer.numberOfTrailingZeros(absDiv);
+        Register tempReg = Register.V0; // 使用临时寄存器
+
+        // sra $v0, $src, 31  -> 提取符号位
+        emit(new CalcAsm(tempReg, AsmOp.SRA, src, 31));
+
+        // srl $v0, $v0, (32 - k) -> 构造偏置值
+        emit(new CalcAsm(tempReg, AsmOp.SRL, tempReg, 32 - shiftBits));
+
+        // addu $v1, $src, $v0 -> 被除数 + 偏置
+        Register adjustedSrc = Register.V1; // 使用另一个临时寄存器
+        emit(new CalcAsm(adjustedSrc, AsmOp.ADDU, src, tempReg));
+
+        // 最后算术右移
+        emit(new CalcAsm(dst, AsmOp.SRA, adjustedSrc, shiftBits));
+    }
+
+    /**
+     * 针对普通整数的优化 (Magic Number)
+     */
+    private void emitGeneralDiv(Register src, int absDiv, Register dst) {
+        MagicData magic = computeMagicParams(absDiv);
+
+        // 将魔数加载到 $v0
+        emit(new LiAsm(Register.V0, (int) magic.multiplier));
+
+        if (magic.multiplier >= 0x80000000L) {
+            // 魔数超出范围，使用 MTHI + MADD
+            emit(new MDRegAsm(AsmOp.MTHI, src));
+            emit(new MulDivAsm(src, AsmOp.MADD, Register.V0));
+        } else {
+            // 正常乘法
+            emit(new MulDivAsm(src, AsmOp.MULT, Register.V0));
+        }
+
+        // 取出高位结果
+        emit(new MDRegAsm(AsmOp.MFHI, Register.V1));
+
+        // 移位修正
+        if (magic.shift > 0) {
+            emit(new CalcAsm(Register.V0, AsmOp.SRA, Register.V1, magic.shift));
+        } else {
+            emit(new MoveAsm(Register.V0, Register.V1));
+        }
+
+        // 符号位修正：result += (src >> 31)
+        emit(new CalcAsm(Register.A0, AsmOp.SRL, src, 31));
+        emit(new CalcAsm(dst, AsmOp.ADDU, Register.V0, Register.A0));
+    }
+
+    /**
+     * 计算魔数参数 (纯逻辑计算，不生成指令)
+     */
+    private MagicData computeMagicParams(int d) {
+        long divisor = d;
+        long twoPower31 = 1L << 31;
+        long limit = (twoPower31 - (twoPower31 % divisor) - 1) / divisor;
+
+        int p = 32;
+        long one = 1L;
+        while ((one << p) <= (limit * (divisor - ((one << p) % divisor)))) {
+            p++;
+        }
+
+        long resMult = ((one << p) + divisor - ((one << p) % divisor)) / divisor;
+        int resShift = p - 32;
+
+        return new MagicData(resMult, resShift);
+    }
+
+    // 内部类：保存魔数结果
+    private static class MagicData {
+        long multiplier;
+        int shift;
+
+        public MagicData(long multiplier, int shift) {
+            this.multiplier = multiplier;
+            this.shift = shift;
+        }
     }
 }

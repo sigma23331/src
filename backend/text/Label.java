@@ -11,6 +11,10 @@ public class Label implements TextAssembly {
         MipsFile.getInstance().toText(this);
     }
 
+    public String getName() {
+        return name;
+    }
+
     @Override
     public String toString() {
         // MIPS 汇编中标签以冒号结尾

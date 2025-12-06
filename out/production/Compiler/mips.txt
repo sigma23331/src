@@ -1,720 +1,215 @@
 .data
-.align 2
-.align 2
-globalVar: .word 0
-.align 2
-var6: .word 0
-.align 2
-globalVar1: .word 0
-.align 2
-globalVar2: .word 0
-.align 2
-vec: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-.align 2
-vec1: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-.align 2
-const0: .word 0
-.align 2
-const12: .word 1, 2
-.align 2
-const3: .word 3
-.align 2
-declareFunc_var0: .word 0
-.align 2
-declareFunc_vars1: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-.align 2
-declareFunc_var22: .word 0
-.align 2
-shortPath_sum3: .word 0
-.align 2
-_str_0: .asciiz "22376286\n"
-.align 2
-_str_1: .asciiz "\n"
-.align 2
-_str_2: .asciiz "globalVar="
-.align 2
-_str_3: .asciiz "calculateFunc()="
-.align 2
-_str_4: .asciiz "declareFunc()="
-.align 2
-_str_5: .asciiz "0\n"
-.align 2
-_str_6: .asciiz "1\n"
-.align 2
-_str_7: .asciiz "2\n"
-.align 2
-_str_8: .asciiz "sum1="
+maxn: .word 200004
+N: .word 0
+V: .word 0
+sum: .word 1
+dp: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
-.text:
+.text
 main:
 main_entry0:
-    addiu $s2, $sp, -4
-    addiu $t2, $sp, -12
-    addiu $t0, $sp, -16
-    addiu $t6, $sp, -20
-    addiu $t1, $sp, -24
-    addiu $t1, $sp, -28
-    addiu $t1, $sp, -32
-    addiu $s1, $sp, -36
-    addiu $t7, $sp, -40
-    addiu $s0, $sp, -48
-    addiu $t5, $sp, -52
-    addiu $t4, $sp, -56
-    la $v1, _str_0
-    move $t3, $v1
-    move $a0, $t3
-    li $v0, 4
-    syscall
-    li $k1, 0
-    sw $k1, 0($s2)
-    move $t3, $t2
-    li $k1, 1
-    sw $k1, 0($t3)
-    move $t3, $t2
-    li $t8, 1
-    sll $t8, $t8, 2
-    addu $t3, $t3, $t8
-    li $k1, 2
-    sw $k1, 0($t3)
-    li $k1, 3
-    sw $k1, 0($t0)
-    li $k0, 1
-    bne $k0, 0, main_if_then1
-    j main_lor_rhs3
-
-main_if_then1:
-    li $k1, 1
-    sw $k1, 0($t6)
-    j main_if_follow2
-
-main_if_follow2:
-    lw $t0, 0($s2)
-    sll $t0, $t0, 0
-    li $k1, 4
-    div $t0, $k1
-    mfhi $t0
-    sra $v0, $t0, 31
-    srl $v0, $v0, 31
-    addu $v1, $t0, $v0
-    sra $t0, $v1, 1
-    move $a0, $t0
-    li $v0, 1
-    syscall
-    la $v1, _str_1
-    move $t0, $v1
-    move $a0, $t0
-    li $v0, 4
-    syscall
-    li $k0, 1
-    bge $k0, 2, main_if_then4
-    j main_if_follow5
-
-main_lor_rhs3:
-    li $k0, 1
-    bne $k0, 0, main_if_then1
-    j main_if_follow2
-
-main_if_then4:
-    li $t0, 34
-    addiu $t3, $t0, -1
-    la $k0, globalVar
-    lw $t6, 0($k0)
-    move $t0, $t2
-    li $t8, 1
-    sll $t8, $t8, 2
-    addu $t0, $t0, $t8
-    lw $t0, 0($t0)
-    li $k1, 44
-    div $t0, $k1
-    mfhi $t0
-    addiu $t0, $t0, 42
-    mul $t0, $t6, $t0
-    addu $t0, $t3, $t0
-    sw $t0, 0($t1)
-    j main_if_follow5
-
-main_if_follow5:
-    li $k1, 2342
-    sw $k1, 0($s1)
-    li $k1, 2323
-    sw $k1, 0($t7)
-    move $t0, $s0
-    li $k1, 10
-    sw $k1, 0($t0)
-    move $t0, $s0
-    li $t8, 1
-    sll $t8, $t8, 2
-    addu $t0, $t0, $t8
-    li $k1, 10
-    sw $k1, 0($t0)
-    li $k1, 1
-    sw $k1, 0($t5)
-    move $t0, $s0
-    sw $t6, -60($sp)
-    sw $t3, -64($sp)
-    sw $t0, -68($sp)
-    sw $t1, -72($sp)
-    sw $s1, -76($sp)
-    sw $t4, -80($sp)
-    sw $t2, -84($sp)
-    sw $t7, -88($sp)
-    sw $t5, -92($sp)
-    sw $s0, -96($sp)
-    sw $s2, -100($sp)
-    sw $ra, -104($sp)
-    move $a0, $t0
-    li $a1, 2
-    addiu $sp, $sp, -104
-    jal sum
-    addiu $sp, $sp, 104
-    lw $ra, -104($sp)
-    lw $s2, -100($sp)
-    lw $s0, -96($sp)
-    lw $t5, -92($sp)
-    lw $t7, -88($sp)
-    lw $t2, -84($sp)
-    lw $t4, -80($sp)
-    lw $s1, -76($sp)
-    lw $t1, -72($sp)
-    lw $t0, -68($sp)
-    lw $t3, -64($sp)
-    lw $t6, -60($sp)
-    move $t0, $v0
-    sw $t0, 0($t5)
-    la $k0, globalVar
-    lw $t0, 0($k0)
-    la $v1, _str_2
-    move $t1, $v1
-    move $a0, $t1
-    li $v0, 4
-    syscall
-    move $a0, $t0
-    li $v0, 1
-    syscall
-    la $v1, _str_1
-    move $t0, $v1
-    move $a0, $t0
-    li $v0, 4
-    syscall
-    la $k0, globalVar1
-    lw $t1, 0($k0)
-    la $v1, _str_2
-    move $t0, $v1
-    move $a0, $t0
-    li $v0, 4
-    syscall
-    move $a0, $t1
-    li $v0, 1
-    syscall
-    la $v1, _str_1
-    move $t0, $v1
-    move $a0, $t0
-    li $v0, 4
-    syscall
-    li $k1, 1
-    sw $k1, 0($t4)
-    lw $t1, 0($s1)
-    lw $t2, 0($t7)
-    move $t0, $s0
-    sw $t6, -60($sp)
-    sw $t3, -64($sp)
-    sw $t0, -68($sp)
-    sw $t1, -72($sp)
-    sw $s1, -76($sp)
-    sw $t4, -80($sp)
-    sw $t2, -84($sp)
-    sw $t7, -88($sp)
-    sw $t5, -92($sp)
-    sw $s0, -96($sp)
-    sw $s2, -100($sp)
-    sw $ra, -104($sp)
-    move $a0, $t1
-    move $a1, $t2
-    move $a2, $t0
-    addiu $sp, $sp, -104
-    jal caculateFunc
-    addiu $sp, $sp, 104
-    lw $ra, -104($sp)
-    lw $s2, -100($sp)
-    lw $s0, -96($sp)
-    lw $t5, -92($sp)
-    lw $t7, -88($sp)
-    lw $t2, -84($sp)
-    lw $t4, -80($sp)
-    lw $s1, -76($sp)
-    lw $t1, -72($sp)
-    lw $t0, -68($sp)
-    lw $t3, -64($sp)
-    lw $t6, -60($sp)
-    move $t0, $v0
-    sw $t0, 0($t4)
-    lw $t0, 0($t4)
-    la $v1, _str_3
-    move $t1, $v1
-    move $a0, $t1
-    li $v0, 4
-    syscall
-    move $a0, $t0
-    li $v0, 1
-    syscall
-    la $v1, _str_1
-    move $t0, $v1
-    move $a0, $t0
-    li $v0, 4
-    syscall
-    sw $t6, -60($sp)
-    sw $t3, -64($sp)
-    sw $t0, -68($sp)
-    sw $t1, -72($sp)
-    sw $s1, -76($sp)
-    sw $t4, -80($sp)
-    sw $t2, -84($sp)
-    sw $t7, -88($sp)
-    sw $t5, -92($sp)
-    sw $s0, -96($sp)
-    sw $s2, -100($sp)
-    sw $ra, -104($sp)
-    addiu $sp, $sp, -104
-    jal declareFunc
-    addiu $sp, $sp, 104
-    lw $ra, -104($sp)
-    lw $s2, -100($sp)
-    lw $s0, -96($sp)
-    lw $t5, -92($sp)
-    lw $t7, -88($sp)
-    lw $t2, -84($sp)
-    lw $t4, -80($sp)
-    lw $s1, -76($sp)
-    lw $t1, -72($sp)
-    lw $t0, -68($sp)
-    lw $t3, -64($sp)
-    lw $t6, -60($sp)
-    la $v1, _str_4
-    move $t0, $v1
-    move $a0, $t0
-    li $v0, 4
-    syscall
-    li $a0, 0
-    li $v0, 1
-    syscall
-    la $v1, _str_1
-    move $t0, $v1
-    move $a0, $t0
-    li $v0, 4
-    syscall
-    la $v1, _str_5
-    move $t0, $v1
-    move $a0, $t0
-    li $v0, 4
-    syscall
-    la $v1, _str_6
-    move $t0, $v1
-    move $a0, $t0
-    li $v0, 4
-    syscall
-    la $v1, _str_7
-    move $t0, $v1
-    move $a0, $t0
-    li $v0, 4
-    syscall
-    lw $t0, 0($t5)
-    la $v1, _str_8
-    move $t1, $v1
-    move $a0, $t1
-    li $v0, 4
-    syscall
-    move $a0, $t0
-    li $v0, 1
-    syscall
-    la $v1, _str_1
-    move $t0, $v1
-    move $a0, $t0
-    li $v0, 4
-    syscall
-    li $v0, 10
-    syscall
-
-declareFunc:
-declareFunc_entry0:
-    addiu $t0, $sp, -4
-    addiu $t1, $sp, -8
-    addiu $t0, $sp, -12
-    li $k1, 1
-    sw $k1, 0($t1)
-    la $k0, declareFunc_var0
-    li $k1, 1
-    sw $k1, 0($k0)
-    la $k0, const0
-    lw $t0, 0($k0)
-    la $v1, declareFunc_vars1
-    move $t1, $v1
-    sw $t0, 0($t1)
-    jr $ra
-
-shortPath:
-    sw $a0, -4($sp)
-
-shortPath_entry0:
-    addiu $t0, $sp, -8
-    lw $k1, -4($sp)
-    sw $k1, 0($t0)
-    la $k0, shortPath_sum3
-    lw $t0, 0($k0)
-    addiu $t0, $t0, 1
-    la $k0, shortPath_sum3
-    sw $t0, 0($k0)
-    la $k0, shortPath_sum3
-    lw $t0, 0($k0)
-    move $v0, $t0
-    jr $ra
-
-caculateFunc:
-    sw $a0, -4($sp)
-    sw $a1, -8($sp)
-    sw $a2, -12($sp)
-
-caculateFunc_entry0:
-    addiu $t2, $sp, -16
-    addiu $t4, $sp, -20
-    addiu $t1, $sp, -24
-    lw $k1, -4($sp)
-    sw $k1, 0($t2)
-    lw $k1, -8($sp)
-    sw $k1, 0($t4)
-    lw $t0, 0($t2)
-    lw $t3, 0($t4)
-    bgt $t0, $t3, caculateFunc_if_then1
-    j caculateFunc_if_follow2
-
-caculateFunc_if_then1:
-    li $v0, 0
-    jr $ra
-
-caculateFunc_if_follow2:
-    lw $t0, 0($t2)
-    lw $t3, 0($t4)
-    bne $t0, $t3, caculateFunc_if_then3
-    j caculateFunc_if_follow4
-
-caculateFunc_if_then3:
-    li $v0, 0
-    jr $ra
-
-caculateFunc_if_follow4:
-    lw $t3, 0($t2)
-    lw $t0, -12($sp)
-    lw $t0, 0($t0)
-    bne $t3, $t0, caculateFunc_if_then5
-    j caculateFunc_if_follow6
-
-caculateFunc_if_then5:
-    lw $t0, -12($sp)
-    lw $t0, 0($t0)
-    move $v0, $t0
-    jr $ra
-
-caculateFunc_if_follow6:
-    li $k1, 0
-    sw $k1, 0($t1)
-    j caculateFunc_for_cond7
-
-caculateFunc_for_cond7:
-    lw $t3, 0($t1)
-    lw $t0, 0($t2)
-    ble $t3, $t0, caculateFunc_for_body8
-    j caculateFunc_for_follow10
-
-caculateFunc_for_body8:
-    lw $t0, 0($t4)
-    beq $t0, 0, caculateFunc_if_then11
-    j caculateFunc_if_follow12
-
-caculateFunc_for_update9:
-    lw $t0, 0($t1)
-    addiu $t0, $t0, 1
-    sw $t0, 0($t1)
-    j caculateFunc_for_cond7
-
-caculateFunc_for_follow10:
-    lw $t0, 0($t4)
-    move $v0, $t0
-    jr $ra
-
-caculateFunc_if_then11:
-    j caculateFunc_for_follow10
-
-caculateFunc_if_follow12:
-    lw $t0, -12($sp)
-    lw $t0, 0($t0)
-    bne $t0, 0, caculateFunc_if_then13
-    j caculateFunc_lor_rhs15
-
-caculateFunc_if_then13:
-    j caculateFunc_for_update9
-
-caculateFunc_if_follow14:
-    li $k0, 0
-    bne $k0, 0, caculateFunc_land_rhs18
-    j caculateFunc_if_follow17
-
-caculateFunc_lor_rhs15:
-    li $k0, 1
-    bne $k0, 0, caculateFunc_if_then13
-    j caculateFunc_if_follow14
-
-caculateFunc_if_then16:
-    j caculateFunc_for_follow10
-
-caculateFunc_if_follow17:
-    li $k0, 1
-    bne $k0, 0, caculateFunc_if_then19
-    j caculateFunc_lor_rhs21
-
-caculateFunc_land_rhs18:
-    lw $t0, 0($t2)
-    sw $t0, -28($sp)
-    sw $t1, -32($sp)
-    sw $t3, -36($sp)
-    sw $t2, -40($sp)
-    sw $t4, -44($sp)
-    sw $ra, -48($sp)
-    move $a0, $t0
-    addiu $sp, $sp, -48
-    jal shortPath
-    addiu $sp, $sp, 48
-    lw $ra, -48($sp)
-    lw $t4, -44($sp)
-    lw $t2, -40($sp)
-    lw $t3, -36($sp)
-    lw $t1, -32($sp)
-    lw $t0, -28($sp)
-    move $t0, $v0
-    bne $t0, 0, caculateFunc_if_then16
-    j caculateFunc_if_follow17
-
-caculateFunc_if_then19:
-    j caculateFunc_for_follow10
-
-caculateFunc_if_follow20:
-    j caculateFunc_for_update9
-
-caculateFunc_lor_rhs21:
-    lw $t0, 0($t4)
-    sw $t0, -28($sp)
-    sw $t1, -32($sp)
-    sw $t3, -36($sp)
-    sw $t2, -40($sp)
-    sw $t4, -44($sp)
-    sw $ra, -48($sp)
-    move $a0, $t0
-    addiu $sp, $sp, -48
-    jal shortPath
-    addiu $sp, $sp, 48
-    lw $ra, -48($sp)
-    lw $t4, -44($sp)
-    lw $t2, -40($sp)
-    lw $t3, -36($sp)
-    lw $t1, -32($sp)
-    lw $t0, -28($sp)
-    move $t0, $v0
-    bne $t0, 0, caculateFunc_if_then19
-    j caculateFunc_if_follow20
-
-sum:
-    sw $a0, -4($sp)
-    sw $a1, -8($sp)
-
-sum_entry0:
-    addiu $t3, $sp, -12
-    addiu $t0, $sp, -16
-    addiu $t2, $sp, -20
-    addiu $t1, $sp, -24
-    lw $k1, -8($sp)
-    sw $k1, 0($t3)
-    li $k1, 0
-    sw $k1, 0($t0)
-    li $k1, 0
-    sw $k1, 0($t2)
-    j sum_for_cond1
-
-sum_for_cond1:
-    lw $t1, 0($t2)
-    lw $t4, 0($t3)
-    blt $t1, $t4, sum_for_body2
-    j sum_for_follow4
-
-sum_for_body2:
-    lw $t4, 0($t0)
-    lw $t1, 0($t2)
-    lw $t1, -4($sp)
-    move $t8, $t1
-    sll $t8, $t8, 2
-    addu $t1, $t1, $t8
-    lw $t1, 0($t1)
-    addu $t1, $t4, $t1
-    sw $t1, 0($t0)
-    j sum_for_update3
-
-sum_for_update3:
-    lw $t1, 0($t2)
-    addiu $t1, $t1, 1
-    sw $t1, 0($t2)
-    j sum_for_cond1
-
-sum_for_follow4:
-    li $k0, 1
-    bgt $k0, 2, sum_if_then5
-    j sum_if_follow6
-
-sum_if_then5:
-    j sum_for_cond7
-
-sum_if_follow6:
-    lw $t0, 0($t0)
-    move $v0, $t0
-    jr $ra
-
-sum_for_cond7:
-    lw $t0, 0($t2)
-    lw $t1, 0($t3)
-    blt $t0, $t1, sum_for_body8
-    j sum_for_follow10
-
-sum_for_body8:
-    j sum_for_update9
-
-sum_for_update9:
-    lw $t0, 0($t2)
-    addiu $t0, $t0, 1
-    sw $t0, 0($t2)
-    j sum_for_cond7
-
-sum_for_follow10:
-    j sum_for_cond11
-
-sum_for_cond11:
-    j sum_for_body12
-
-sum_for_body12:
-    j sum_for_update13
-
-sum_for_update13:
-    lw $t0, 0($t2)
-    addiu $t0, $t0, 1
-    sw $t0, 0($t2)
-    j sum_for_cond11
-
-sum_for_follow14:
-    j sum_for_cond15
-
-sum_for_cond15:
-    j sum_for_body16
-
-sum_for_body16:
-    j sum_for_update17
-
-sum_for_update17:
-    j sum_for_cond15
-
-sum_for_follow18:
-    li $k1, 0
-    sw $k1, 0($t2)
-    j sum_for_cond19
-
-sum_for_cond19:
-    j sum_for_body20
-
-sum_for_body20:
-    j sum_for_update21
-
-sum_for_update21:
-    lw $t0, 0($t2)
-    addiu $t0, $t0, 1
-    sw $t0, 0($t2)
-    j sum_for_cond19
-
-sum_for_follow22:
-    j sum_for_cond23
-
-sum_for_cond23:
-    lw $t1, 0($t2)
-    lw $t0, 0($t3)
-    blt $t1, $t0, sum_for_body24
-    j sum_for_follow26
-
-sum_for_body24:
-    j sum_for_update25
-
-sum_for_update25:
-    j sum_for_cond23
-
-sum_for_follow26:
-    li $k1, 0
-    sw $k1, 0($t2)
-    j sum_for_cond27
-
-sum_for_cond27:
-    lw $t0, 0($t2)
-    lw $t1, 0($t3)
-    blt $t0, $t1, sum_for_body28
-    j sum_for_follow30
-
-sum_for_body28:
-    j sum_for_update29
-
-sum_for_update29:
-    j sum_for_cond27
-
-sum_for_follow30:
-    li $k1, 0
-    sw $k1, 0($t2)
-    j sum_for_cond31
-
-sum_for_cond31:
-    j sum_for_body32
-
-sum_for_body32:
-    j sum_for_update33
-
-sum_for_update33:
-    j sum_for_cond31
-
-sum_for_follow34:
-    li $k1, 0
-    sw $k1, 0($t2)
-    li $k1, 0
-    sw $k1, 0($t1)
-    j sum_for_cond35
-
-sum_for_cond35:
-    j sum_for_body36
-
-sum_for_body36:
-    j sum_for_update37
-
-sum_for_update37:
-    j sum_for_cond35
-
-sum_for_follow38:
-    li $k0, 1
-    bgt $k0, 2, sum_if_then39
-    j sum_if_else41
-
-sum_if_then39:
-    j sum_if_follow40
-
-sum_if_follow40:
-    li $k1, 1
-    sw $k1, 0($t2)
-    li $t1, -1
-    sw $t1, 0($t2)
-    li $t1, 2
-    li $k1, 0
-    subu $t1, $k1, $t1
-    sw $t1, 0($t2)
-    li $k1, 1
-    sw $k1, 0($t2)
-    j sum_if_follow6
-
-sum_if_else41:
-    j sum_if_follow40
+	addiu $k0, $sp, -800036
+	sw $k0, -4($sp)
+	addiu $t1, $sp, -1600052
+	li $v0, 5
+	syscall
+	move $t0, $v0
+	la $k0, N
+	sw $t0, 0($k0)
+	li $v0, 5
+	syscall
+	move $t0, $v0
+	la $k0, V
+	sw $t0, 0($k0)
+	li $t3, 1
+main_for_cond1:
+	la $k0, N
+	lw $t0, 0($k0)
+	bgt $t3, $t0, main_for_follow4
+main_for_body2:
+	li $v0, 5
+	syscall
+	sw $v0, -8($sp)
+	li $v0, 5
+	syscall
+	move $t2, $v0
+	li $v0, 5
+	syscall
+	move $t0, $v0
+	move $k0, $t0
+	sw $k0, -12($sp)
+	li $t5, 1
+main_for_cond5:
+	lw $k1, -12($sp)
+	bgt $t5, $k1, main_for_follow8
+main_for_body6:
+	lw $k1, -8($sp)
+	mul $t6, $t5, $k1
+	la $k0, sum
+	lw $t7, 0($k0)
+	li $t8, 0
+	move $v1, $t7
+	sll $v1, $v1, 2
+	addu $t8, $t8, $v1
+	lw $t7, -4($sp)
+	addu $t7, $t7, $t8
+	sw $t6, 0($t7)
+	mul $t6, $t5, $t2
+	lw $t7, 0($k0)
+	li $t8, 0
+	move $v1, $t7
+	sll $v1, $v1, 2
+	addu $t8, $t8, $v1
+	move $t7, $t1
+	addu $t7, $t7, $t8
+	sw $t6, 0($t7)
+	lw $t6, 0($k0)
+	addiu $t6, $t6, 1
+	sw $t6, 0($k0)
+	lw $k0, -12($sp)
+	subu $t6, $k0, $t5
+	sll $k0, $t5, 1
+	sw $k0, -16($sp)
+	move $k0, $t6
+	sw $k0, -12($sp)
+	lw $t5, -16($sp)
+	j main_for_cond5
+main_for_follow8:
+	lw $k0, -12($sp)
+	beq $k0, 0, main_if_follow10
+main_if_then9:
+	lw $k0, -12($sp)
+	lw $k1, -8($sp)
+	mul $t0, $k0, $k1
+	la $k0, sum
+	lw $t5, 0($k0)
+	li $t8, 0
+	move $v1, $t5
+	sll $v1, $v1, 2
+	addu $t8, $t8, $v1
+	lw $t5, -4($sp)
+	addu $t5, $t5, $t8
+	sw $t0, 0($t5)
+	lw $k0, -12($sp)
+	mul $t2, $k0, $t2
+	la $k0, sum
+	lw $t0, 0($k0)
+	li $t8, 0
+	move $v1, $t0
+	sll $v1, $v1, 2
+	addu $t8, $t8, $v1
+	move $t0, $t1
+	addu $t0, $t0, $t8
+	sw $t2, 0($t0)
+	lw $t0, 0($k0)
+	addiu $t0, $t0, 1
+	sw $t0, 0($k0)
+main_if_follow10:
+	addiu $t2, $t3, 1
+	move $t3, $t2
+	j main_for_cond1
+main_for_follow4:
+	li $t3, 1
+main_for_cond11:
+	la $k0, sum
+	lw $t0, 0($k0)
+	bgt $t3, $t0, main_for_follow14
+main_for_body12:
+	la $k0, V
+	lw $t5, 0($k0)
+	move $t6, $t5
+main_for_cond15:
+	li $t8, 0
+	move $v1, $t3
+	sll $v1, $v1, 2
+	addu $t8, $t8, $v1
+	lw $t2, -4($sp)
+	addu $t2, $t2, $t8
+	lw $t0, 0($t2)
+	blt $t6, $t0, main_for_follow18
+main_for_body16:
+	li $t8, 0
+	move $v1, $t6
+	sll $v1, $v1, 2
+	addu $t8, $t8, $v1
+	la $t0, dp
+	addu $t0, $t0, $t8
+	lw $t4, 0($t0)
+	lw $t2, 0($t2)
+	subu $t2, $t6, $t2
+	li $t8, 0
+	move $v1, $t2
+	sll $v1, $v1, 2
+	addu $t8, $t8, $v1
+	la $t2, dp
+	addu $t2, $t2, $t8
+	lw $t7, 0($t2)
+	li $t8, 0
+	move $v1, $t3
+	sll $v1, $v1, 2
+	addu $t8, $t8, $v1
+	move $t2, $t1
+	addu $t2, $t2, $t8
+	lw $t2, 0($t2)
+	addu $t2, $t7, $t2
+	sw $t0, -1600056($sp)
+	sw $t7, -1600060($sp)
+	sw $t2, -1600064($sp)
+	sw $t5, -1600068($sp)
+	sw $t6, -1600072($sp)
+	sw $t3, -1600076($sp)
+	sw $t4, -1600080($sp)
+	sw $t1, -1600084($sp)
+	sw $ra, -1600088($sp)
+	move $a0, $t4
+	move $a1, $t2
+	addiu $sp, $sp, -1600088
+	jal max
+	addiu $sp, $sp, 1600088
+	lw $ra, -1600088($sp)
+	lw $t1, -1600084($sp)
+	lw $t4, -1600080($sp)
+	lw $t3, -1600076($sp)
+	lw $t6, -1600072($sp)
+	lw $t5, -1600068($sp)
+	lw $t2, -1600064($sp)
+	lw $t7, -1600060($sp)
+	lw $t0, -1600056($sp)
+	move $t2, $v0
+	sw $t2, 0($t0)
+	addiu $t4, $t6, -1
+	move $t6, $t4
+	j main_for_cond15
+main_for_follow18:
+	addiu $k0, $t3, 1
+	sw $k0, -20($sp)
+	move $t3, $k0
+	j main_for_cond11
+main_for_follow14:
+	la $k0, V
+	lw $t0, 0($k0)
+	li $t8, 0
+	move $v1, $t0
+	sll $v1, $v1, 2
+	addu $t8, $t8, $v1
+	la $t0, dp
+	addu $t0, $t0, $t8
+	lw $t0, 0($t0)
+	move $a0, $t0
+	li $v0, 1
+	syscall
+	li $v0, 10
+	syscall
+max:
+	sw $a0, -4($sp)
+	sw $a1, -8($sp)
+max_entry0:
+	lw $k0, -4($sp)
+	lw $k1, -8($sp)
+	ble $k0, $k1, max_if_follow2
+max_if_then1:
+	lw $v0, -4($sp)
+	jr $ra
+max_if_follow2:
+	lw $v0, -8($sp)
+	jr $ra

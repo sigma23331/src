@@ -9,7 +9,7 @@ import java.util.LinkedList;
 /**
  * IR 中所有“值”的基类 (新版本，带 Use)。
  */
-public abstract class Value { // 设为 abstract，与您的源代码不同
+public class Value { // 设为 abstract，与您的源代码不同
 
     /**
      * 属性：这个值的类型。

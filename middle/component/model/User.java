@@ -83,6 +83,10 @@ public class User extends Value {
         return this.operands.get(index).getValue();
     }
 
+    public ArrayList<Use> getOperands() {
+        return operands;
+    }
+
     public int getNumOperands() {
         return this.operands.size();
     }

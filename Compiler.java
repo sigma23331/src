@@ -3,15 +3,17 @@ import error.ErrorHandler;
 import frontend.Lexer;
 import frontend.Parser;
 import frontend.Token.Token;
-import frontend.syntax.CompileUnit; // 引入 CompUnit
+import frontend.syntax.CompileUnit;
 import middle.*;
 import middle.component.model.Module;
 import middle.symbol.SymbolRecord;
 
+// 【新增：引入优化器】
+import middle.Optimizer;
+
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintStream; // 引入 PrintStream 用于重定向
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -29,7 +31,7 @@ public class Compiler {
         String symbolOutputFile = "symbol.txt";
         String errorOutputFile = "error.txt";
         String irOutputFile = "llvm_ir.txt";
-        String mipsOutputFile = "mips.txt"; // --- 【新增：MIPS 输出文件】 ---
+        String mipsOutputFile = "mips.txt";
 
         try {
             // 1. 读取 testfile.txt 中的全部内容
@@ -75,17 +77,30 @@ public class Compiler {
                 IRBuilder irBuilder = new IRBuilder(scopeManager);
                 Module irModule = irBuilder.build(astRoot);
 
+                // --- 【新增：中间代码优化】 ---
+                // 在输出 IR 和生成后端代码之前，运行优化器
+
+                // 开关：控制是否开启优化（方便调试，如果出错了改为 false 对比）
+                boolean openOptimize = true;
+
+                if (openOptimize) {
+                    // 创建优化器并传入 Module
+                    Optimizer optimizer = new Optimizer(irModule);
+                    // 执行优化 (调用你之前定义的 optimize() 方法)
+                    optimizer.run();
+                }
+
                 // 2. 输出 IR 到文件
+                // (注意：如果开启了优化，这里输出的就是优化后的 IR)
                 printIR(irModule, irOutputFile);
 
-                // --- 【新增：第 4 遍：后端生成 MIPS】 ---
+                // --- 第 4 遍：后端生成 MIPS ---
 
                 // 3. 创建 MipsBuilder
-                // 参数2: optimizeOn (是否开启优化)，目前我们传入 false
-                MipsBuilder mipsBuilder = new MipsBuilder(irModule, true);
+                // 参数2: optimizeOn (告诉后端前端是否已经优化过，或者控制后端特有的优化)
+                MipsBuilder mipsBuilder = new MipsBuilder(irModule, openOptimize);
 
                 // 4. 执行构建
-                // 这会将指令写入 MipsFile 的单例对象中
                 mipsBuilder.build(true);
 
                 // 5. 输出 MIPS 汇编到文件
@@ -98,19 +113,14 @@ public class Compiler {
         }
     }
 
-    /**
-     * 【新增方法】将 MipsFile 单例中的内容写入 mips.txt
-     */
-    private static void printMips(String filePath) throws IOException {
-        // 获取全局单例生成的汇编字符串
-        String mipsCode = MipsFile.getInstance().toString();
+    // ... (printMips, printIR, printSymbols, printErrors 等辅助方法保持不变) ...
 
+    private static void printMips(String filePath) throws IOException {
+        String mipsCode = MipsFile.getInstance().toString();
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             writer.write(mipsCode);
         }
     }
-
-    // ... (printIR, printSymbols, printErrors 保持不变) ...
 
     private static void printIR(Module module, String filePath) throws IOException {
         String irCode = module.toString();

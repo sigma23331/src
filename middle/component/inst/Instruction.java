@@ -54,6 +54,14 @@ public abstract class Instruction extends User {
         // 但图的连接关系（Def-Use Chain）已经完全断开，满足 Mem2Reg 删除指令的需求。
     }
 
+    public void remove() {
+        if (this.parent != null) {
+            this.removeOperands(); // 断开 Use-Def
+            this.parent.getInstructions().remove(this); // 从块中断开
+            this.parent = null; // 断开反向引用
+        }
+    }
+
     /**
      * 指令是否具有副作用 (例如：修改内存、IO、跳转)。
      * 这对于死代码消除等优化至关重要。

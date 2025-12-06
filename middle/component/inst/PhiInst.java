@@ -1,4 +1,4 @@
- package middle.component.inst;
+package middle.component.inst;
 
 import middle.component.model.BasicBlock;
 import middle.component.model.Value;
@@ -21,6 +21,8 @@ public class PhiInst extends Instruction {
         this.setName(name);
     }
 
+    static int globalPhiCounter = 0;
+
     /**
      * (新) 构造函数：适配 Mem2Reg 优化的调用需求
      * @param type 数据类型 (例如 i32)
@@ -29,13 +31,8 @@ public class PhiInst extends Instruction {
      */
     public PhiInst(Type type, BasicBlock parentBlock, List<BasicBlock> predBlocks) {
         super(type);
-        // 给一个默认名字，例如 "phi"
-        this.setName("phi");
-
-        // Mem2Reg 在 placePhiNodes 阶段创建 Phi 时，
-        // 具体的 incoming value 还没有确定 (需要等到 rename 阶段)。
-        // 所以这里我们只需要初始化对象即可。
-        // 操作数会在后续调用 addValue / addIncoming 时添加。
+        // 【关键修复】：加上 "%" 前缀
+        this.setName("%phi_" + (globalPhiCounter++));
     }
 
     /**
@@ -103,6 +100,21 @@ public class PhiInst extends Instruction {
         }
         return values;
     }
+
+    /**
+     * 移除第 i 个传入项 (Val, Block)
+     */
+    public void removeIncoming(int index) {
+        // 操作数索引： value 是 index*2， block 是 index*2+1
+        int operandIndex = index * 2;
+
+        // 移除 Block (User 的 operands 列表)
+        this.getOperands().remove(operandIndex + 1);
+        // 移除 Value
+        this.getOperands().remove(operandIndex);
+    }
+
+
 
     @Override
     public boolean hasSideEffect() {

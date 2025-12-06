@@ -8,7 +8,7 @@ public class MoveInst extends Instruction {
      * 构造函数
      * 将 source 的值移动（复制）给 result
      * 通常用于 Phi 消除阶段生成的并行副本 (Parallel Copy)
-     * * @param result 目标值 (To) - 通常是一个变量或寄存器
+     * @param result 目标值 (To) - 通常是一个变量或寄存器
      * @param source 源值 (From) - 被复制的值
      */
     public MoveInst(Value result, Value source) {
@@ -46,9 +46,17 @@ public class MoveInst extends Instruction {
 
     @Override
     public String toString() {
-        // 提示：
-        // 拼装 Move 指令，格式通常为 "move dst, src"
-        // 例如: "move %t0, 10"
-        return "move " + getToValue().toString() + ", " + getFromValue().toString();
+        // 【关键修复】
+        // 1. 获取 Value 对象
+        Value to = getToValue();
+        Value from = getFromValue();
+
+        // 2. 使用 getName() 而不是 toString()
+        //    toString() 会递归打印指令定义，不仅导致 IR 难看，还会在 Phi 不完整时导致 NPE
+        // 3. 增加 null 检查，防止潜在的空指针异常
+        String toStr = (to == null) ? "null" : to.getName();
+        String fromStr = (from == null) ? "null" : from.getName();
+
+        return "move " + toStr + ", " + fromStr;
     }
 }

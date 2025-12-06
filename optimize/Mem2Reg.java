@@ -245,6 +245,7 @@ public class Mem2Reg {
                         PhiInst phi = new PhiInst(activeAlloca.getAllocatedType(), frontierBlock,
                                 new ArrayList<>(frontierBlock.getPrevBlocks()));
 
+                        phi.setParent(frontierBlock);
                         // 插入到块首
                         frontierBlock.getInstructions().add(0, phi);
 

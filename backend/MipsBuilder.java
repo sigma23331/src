@@ -43,15 +43,17 @@ public class MipsBuilder {
         this.module = module;
         this.optimizeOn = optimizeOn;
 
-        // 如果开启优化，按顺序执行优化 Pass
         if (optimizeOn) {
-            // TODO: 填入源代码中的优化步骤
-            // 1. ZextRemoval
-            // 2. RegAlloc (这是核心，填充 var2reg)
+            // 1. 先进行寄存器分配 (填充 var2reg)
             RegAlloc regAlloc = new RegAlloc();
             regAlloc.run(module);
-            // 3. RemovePhi
-            // 4. 更新 Module ID
+
+            // 2. 然后基于分配好的寄存器消除 Phi
+            // (RemovePhi 内部会读取 function.getVar2reg())
+            optimize.RemovePhi.run(module);
+        } else {
+            // 如果不优化，也需要消除 Phi (但此时 var2reg 为空，只做简单的 Move 插入)
+            // optimize.RemovePhi.run(module);
         }
 
         // 初始化指令分发器
@@ -221,71 +223,57 @@ public class MipsBuilder {
         this.curStackOffset = 0;
 
         // 7.1 初始化寄存器分配表
-        // 如果开启优化，后续会有 Pass 填充 var2reg；否则为空，所有变量走栈
         this.var2reg = optimizeOn ? new HashMap<>(function.getVar2reg()) : new HashMap<>();
 
-        // 7.2 生成函数标签 (去掉 @ 前缀)
+        // 7.2 生成函数标签
         emit(new Label(parseLabel(function.getName())));
 
-        // 7.3 处理函数参数
+        // 7.3 处理函数参数 (保持不变)
         ArrayList<FuncParam> funcParams = function.getParams();
         int totalStackArgs = Math.max(0, funcParams.size() - 4);
 
         for (int i = 0; i < funcParams.size(); i++) {
             FuncParam arg = funcParams.get(i);
-
             if (i < 4) {
-                // 前 4 个参数：分配到寄存器，同时也预留栈空间
                 curStackOffset -= 4;
                 var2Offset.put(arg, curStackOffset);
-
-                // 【核心修改 A】：获取当前参数所在的物理寄存器
                 Register argReg = Register.getByOffset(Register.A0, i);
-
-                // 【核心修改 B】：必须生成指令，把 $a0-$a3 的值存入栈中永久保存！
                 emit(new MemAsm(AsmOp.SW, argReg, Register.SP, curStackOffset));
-
-                // 【核心修改 C - 极为重要】：
-                // 绝对不要把 arg 放入 var2reg！
-                // 删除这行 -> var2reg.put(arg, argReg);
-                // 让编译器以后每次使用 arg 时，都强制去栈里(lw)取值。
-                // 虽然慢一点，但绝对安全，不会被 putint/$a0 污染。
-
             } else {
-                // 栈上参数处理保持不变
                 int stackArgIndex = i - 4;
                 int stackArgOffset = (totalStackArgs - 1 - stackArgIndex) * 4;
                 var2Offset.put(arg, stackArgOffset);
             }
         }
 
-        // 7.4 遍历所有基本块中的指令，为局部变量分配栈空间
-        // 凡是产生值(Value)且没有被分配寄存器的指令，都需要栈空间
+        // 7.4 【关键修改】遍历所有指令，为局部变量分配栈空间
         for (BasicBlock block : function.getBasicBlocks()) {
             for (Instruction inst : block.getInstructions()) {
-                // 跳过没有名字/返回值的指令 (如 store, br, ret)
-                // 假设你的 Instruction 如果没有结果，名字可能是空或者类型是 VoidType
-                if (inst.getType() instanceof VoidType) {
-                    continue;
-                }
 
-                // 如果已经分配了寄存器(在优化开启时)，则不需要栈空间
-                if (var2reg.containsKey(inst)) {
-                    continue;
+                if (inst instanceof MoveInst) {
+                    Value dest = ((MoveInst) inst).getToValue();
+                    // 如果这个临时变量没有寄存器也没有栈空间，必须分配！
+                    if (!var2reg.containsKey(dest) && !var2Offset.containsKey(dest)) {
+                        curStackOffset -= 4;
+                        var2Offset.put(dest, curStackOffset);
+                    }
                 }
+                // --- 新增逻辑结束 ---
 
-                // 如果已经分配过栈空间(极少见，防止重复)，跳过
-                if (var2Offset.containsKey(inst)) {
-                    continue;
-                }
+                // 跳过无返回值的指令
+                if (inst.getType() instanceof VoidType) continue;
 
-                // ！！分配栈空间！！
+                // 如果已经分配了寄存器或栈空间，跳过
+                if (var2reg.containsKey(inst)) continue;
+                if (var2Offset.containsKey(inst)) continue;
+
+                // 为普通指令分配栈空间
                 curStackOffset -= 4;
                 var2Offset.put(inst, curStackOffset);
             }
         }
 
-        // 7.5 生成具体的指令代码
+        // 7.5 生成指令
         for (BasicBlock block : function.getBasicBlocks()) {
             buildBasicBlock(block);
         }
@@ -433,19 +421,45 @@ public class MipsBuilder {
             // MIPS: li $k1, 5
             int imm = ((ConstInt) value).getValue();
             emit(new LiAsm(dataReg, imm));
-        } else if (var2reg.containsKey(value)) {
-            // Case B: 值在寄存器 $t1
-            // dataReg 直接引用 $t1
+        }
+        else if (value instanceof GlobalVar) {
+            // 【新增 Case】: 存全局变量的地址
+            // 例如: store i32* @g, i32** %ptr
+            // MIPS: la $k1, g
+            emit(new LaAsm(dataReg, parseLabel(value.getName())));
+        }
+        else if (value instanceof ConstString) {
+            // 【新增 Case】: 存字符串常量的地址
+            // MIPS: la $k1, str_label
+            String label = parseLabel(value.getName());
+            if (label.startsWith("@")) label = label.substring(1); // 防御性处理
+            // 处理字符串命名规则 (参考 buildConstString)
+            if (!label.startsWith("str_")) {
+                label = label.replace("@", "").replace(".", "_");
+                if (!label.startsWith("str_")) label = "s_" + label; // 简单 hack，请确保和 buildConstString 一致
+                // 最稳妥的是复用 parseLabel 或保持一致的命名逻辑
+                // 假设 parseLabel 已经处理了 . -> _
+            }
+            emit(new LaAsm(dataReg, label));
+        }
+        else if (var2reg.containsKey(value)) {
+            // Case B: 值在寄存器
             dataReg = var2reg.get(value);
-        } else {
-            // Case C: 值在栈上 -8($sp)
-            // MIPS: lw $k1, -8($sp)
-            emit(new MemAsm(AsmOp.LW, dataReg, Register.SP, var2Offset.get(value)));
+        }
+        else {
+            // Case C: 值在栈上
+            Integer offset = var2Offset.get(value);
+            if (offset == null) {
+                // 【NPE 保护】抛出详细异常
+                throw new RuntimeException("GenCode Error: Store value not found in stack. Inst=" + storeInst + ", Val=" + value.getName());
+            }
+            emit(new MemAsm(AsmOp.LW, dataReg, Register.SP, offset));
         }
 
+        // ==========================================
         // 3. 执行存储
-        // MIPS: sw $k1, 0($k0) (或者 sw $t1, 0($t0))
-        // 含义：把 dataReg 的值写入 addrReg 指向的内存
+        // ==========================================
+        // MIPS: sw $data, 0($addr)
         emit(new MemAsm(AsmOp.SW, dataReg, addrReg, 0));
     }
 
@@ -847,8 +861,23 @@ public class MipsBuilder {
         String falseLabel = parseLabel(currentFunction.getName()) + "_" +
                 falseBlock.getName().replace(".", "_");
 
+        // --- 【修复 1】：处理条件是常量的情况 (常量折叠) ---
+        // 这一步能防止后面去 var2Offset 查常量导致 NPE
+        if (cond instanceof ConstInt) {
+            int val = ((ConstInt) cond).getValue();
+            if (val != 0) {
+                // 条件恒为真 -> 直接跳转到 trueLabel
+                emit(new JumpAsm(AsmOp.J, trueLabel));
+            } else {
+                // 条件恒为假 -> 直接跳转到 falseLabel
+                emit(new JumpAsm(AsmOp.J, falseLabel));
+            }
+            return; // 处理完毕，直接返回
+        }
+
         // --- 3. 尝试融合比较指令 (Peephole Optimization) ---
         // 检查条件是否是一个比较指令 (BinaryInst 且是 Compare 类型)
+        // 且该比较指令只被当前跳转使用 (如果被多次使用，可能需要保留计算结果，这里假设可以融合)
         if (cond instanceof BinaryInst && ((BinaryInst) cond).getOpCode().isCompare()) {
             BinaryInst compareInst = (BinaryInst) cond;
 
@@ -856,17 +885,24 @@ public class MipsBuilder {
             Value op1 = compareInst.getOp1();
             Value op2 = compareInst.getOp2();
 
-            // 加载 op1 到寄存器
-            Register reg1 = Register.K0;
+            // --- 加载 op1 (左操作数) ---
+            // 策略：如果是常量->li到K0; 如果是寄存器->直接用; 如果是栈->lw到K0
+            Register reg1;
             if (op1 instanceof ConstInt) {
+                reg1 = Register.K0;
                 emit(new LiAsm(reg1, ((ConstInt) op1).getValue()));
             } else if (var2reg.containsKey(op1)) {
                 reg1 = var2reg.get(op1);
             } else {
-                emit(new MemAsm(AsmOp.LW, reg1, Register.SP, var2Offset.get(op1)));
+                // 栈加载保护
+                Integer offset = var2Offset.get(op1);
+                if (offset == null) throw new RuntimeException("CondBr Op1 not found in stack: " + op1.getName());
+                reg1 = Register.K0;
+                emit(new MemAsm(AsmOp.LW, reg1, Register.SP, offset));
             }
 
-            // 加载/准备 op2
+            // --- 加载 op2 (右操作数) ---
+            // 策略：如果是常量->记录数值(用于立即数优化); 否则同上，但使用 K1 防止覆盖 K0
             Register reg2 = null;
             int immVal = 0;
             boolean op2IsConst = (op2 instanceof ConstInt);
@@ -874,11 +910,14 @@ public class MipsBuilder {
             if (op2IsConst) {
                 immVal = ((ConstInt) op2).getValue();
             } else {
-                reg2 = Register.K1; // 暂存到 K1
                 if (var2reg.containsKey(op2)) {
                     reg2 = var2reg.get(op2);
                 } else {
-                    emit(new MemAsm(AsmOp.LW, reg2, Register.SP, var2Offset.get(op2)));
+                    // 【关键】：这里必须用 K1，因为 K0 可能正在存放 op1
+                    Integer offset = var2Offset.get(op2);
+                    if (offset == null) throw new RuntimeException("CondBr Op2 not found in stack: " + op2.getName());
+                    reg2 = Register.K1;
+                    emit(new MemAsm(AsmOp.LW, reg2, Register.SP, offset));
                 }
             }
 
@@ -894,12 +933,12 @@ public class MipsBuilder {
                 default -> throw new RuntimeException("Unknown compare op");
             }
 
-            // 3.3 生成条件跳转指令 (跳到 True Block)
+            // 3.3 生成条件跳转指令 (满足条件跳到 True Block)
             if (op2IsConst) {
-                // 优化：利用立即数比较 (beq $t0, 100, label)
+                // 优化：利用伪指令支持立即数比较 (例如: beq $t0, 100, label)
                 emit(new BrAsm(trueLabel, reg1, asmOp, immVal));
             } else {
-                // 标准：寄存器比较 (beq $t0, $t1, label)
+                // 标准：寄存器比较 (例如: beq $t0, $t1, label)
                 emit(new BrAsm(trueLabel, reg1, asmOp, reg2));
             }
 
@@ -907,11 +946,18 @@ public class MipsBuilder {
             // --- 4. 情况 B: 条件只是一个普通的 i1 变量 ---
             // 逻辑：if (cond != 0) goto True
 
-            Register condReg = Register.K0;
+            Register condReg;
             if (var2reg.containsKey(cond)) {
                 condReg = var2reg.get(cond);
             } else {
-                emit(new MemAsm(AsmOp.LW, condReg, Register.SP, var2Offset.get(cond)));
+                // 【修复 2】：增加空指针检查，防止再次 NPE
+                Integer offset = var2Offset.get(cond);
+                if (offset == null) {
+                    throw new RuntimeException("GenCode Error: Boolean condition value not found in stack/reg. Val=" + cond.getName());
+                }
+                // 使用 K0 加载
+                condReg = Register.K0;
+                emit(new MemAsm(AsmOp.LW, condReg, Register.SP, offset));
             }
 
             // 生成: bne $cond, $zero, trueLabel
@@ -919,7 +965,7 @@ public class MipsBuilder {
         }
 
         // 5. 无条件跳转到 False Block (Fall-through 的替代)
-        // 如果上面的 Branch 没跳走，就继续执行这一句跳去 False
+        // 如果上面的 Branch 没跳走，说明条件不满足，去 False 分支
         emit(new JumpAsm(AsmOp.J, falseLabel));
     }
 

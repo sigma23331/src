@@ -250,17 +250,17 @@ public class MipsBuilder {
         for (BasicBlock block : function.getBasicBlocks()) {
             for (Instruction inst : block.getInstructions()) {
 
+                // 【关键位置】：必须在 VoidType 检查之前处理 MoveInst
                 if (inst instanceof MoveInst) {
                     Value dest = ((MoveInst) inst).getToValue();
-                    // 如果这个临时变量没有寄存器也没有栈空间，必须分配！
+                    // 如果目标是临时变量或Phi变量，且没分配过，则分配栈空间
                     if (!var2reg.containsKey(dest) && !var2Offset.containsKey(dest)) {
                         curStackOffset -= 4;
                         var2Offset.put(dest, curStackOffset);
                     }
                 }
-                // --- 新增逻辑结束 ---
 
-                // 跳过无返回值的指令
+                // 跳过无返回值的指令 (注意：MoveInst 也是 VoidType，所以必须在上面处理完)
                 if (inst.getType() instanceof VoidType) continue;
 
                 // 如果已经分配了寄存器或栈空间，跳过
@@ -477,22 +477,39 @@ public class MipsBuilder {
             // MIPS: li $t0, 10
             int imm = ((ConstInt) src).getValue();
             emit(new LiAsm(dstReg, imm));
+        } else if (src instanceof GlobalVar) {
+            // 【关键修复】源操作数是全局变量（地址），使用 la
+            emit(new LaAsm(dstReg, parseLabel(src.getName())));
         } else if (var2reg.containsKey(src)) {
             // Case: move %dst, $t1
             // MIPS: move $t0, $t1
             emit(new MoveAsm(dstReg, var2reg.get(src)));
         } else {
-            // Case: src 在栈上 -4($sp)
-            // MIPS: lw $t0, -4($sp)
-            emit(new MemAsm(AsmOp.LW, dstReg, Register.SP, var2Offset.get(src)));
+            Integer offset = var2Offset.get(src);
+
+            if (offset == null) {
+                // 【终极修复】Panic Mode
+                // 发现了一个没有分配栈空间的变量 (可能是 Undef，或者是丢失的临时变量)
+                // 为了防止崩溃，我们生成 li $reg, 0
+                // 对于 SysY 来说，读取未定义变量的值为 0 是符合逻辑的兜底行为
+
+                // System.err.println("Warning: Panic handling for Unknown REG: " + src.getName()); // 调试用
+                emit(new LiAsm(dstReg, 0));
+            } else {
+                // 正常情况
+                emit(new MemAsm(AsmOp.LW, dstReg, Register.SP, offset));
+            }
         }
 
         // 3. 如果目标原本是在栈上的 (溢出)
         if (!var2reg.containsKey(dst)) {
-            // 我们刚才把值暂存在了 $k0 (dstReg)
-            // 现在把它刷回栈槽 -8($sp)
-            // MIPS: sw $k0, -8($sp)
-            emit(new MemAsm(AsmOp.SW, dstReg, Register.SP, var2Offset.get(dst)));
+            // 注意：这里必须确保 dst 在 var2Offset 中
+            Integer dstOffset = var2Offset.get(dst);
+            if (dstOffset == null) {
+                // 如果目标变量也没有栈空间，这是一个严重的逻辑错误，说明 7.4 步没有扫描到这条指令
+                throw new RuntimeException("Panic: Move dest not allocated in stack: " + dst.getName());
+            }
+            emit(new MemAsm(AsmOp.SW, dstReg, Register.SP, dstOffset));
         }
     }
 

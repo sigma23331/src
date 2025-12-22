@@ -112,7 +112,7 @@ public class RemovePhi {
                     if (moveList.get(i).getToValue().equals(moveList.get(j).getFromValue())) {
                         // 【关键修复 2】：变量名必须以 % 开头
                         String name = "%pc_temp_" + (tempCounter++);
-                        Value tempValue = new Value(IntegerType.get32());
+                        Value tempValue = new Value(moveList.get(i).getToValue().getType());
                         tempValue.setName(name);
 
                         MoveInst tempMove = new MoveInst(tempValue, moveList.get(i).getToValue());
@@ -142,7 +142,7 @@ public class RemovePhi {
 
                         // 【关键修复 2】：变量名必须以 % 开头
                         String name = "%pc_reg_temp_" + (tempCounter++);
-                        Value tempValue = new Value(IntegerType.get32());
+                        Value tempValue = new Value(moveList.get(i).getToValue().getType());
                         tempValue.setName(name);
 
                         MoveInst tempMove = new MoveInst(tempValue, destI);

@@ -4,6 +4,8 @@
 package middle.component.model;
 
 import middle.component.type.Type; // 确保您使用的是新Type接口
+
+import java.util.ArrayList;
 import java.util.LinkedList;
 
 /**
@@ -66,6 +68,14 @@ public class Value { // 设为 abstract，与您的源代码不同
 
     public LinkedList<Use> getUseList() {
         return useList;
+    }
+
+    public ArrayList<User> getUsers() {
+        ArrayList<User> users = new ArrayList<>();
+        for (Use use : useList) {
+            users.add(use.getUser());
+        }
+        return users;
     }
 
     /**

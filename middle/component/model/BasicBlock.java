@@ -58,53 +58,71 @@ public class BasicBlock extends Value {
     public LinkedList<Instruction> getInstructions() { return this.instructions; }
 
     /**
-     * 由 IRBuilder 调用，负责建立双向链接
+     * 由 IRBuilder 或 优化Pass 调用，负责建立双向链接并维护指令顺序约束
      */
     public void addInstruction(Instruction inst) {
+        // 0. 设置父指针
+        inst.setParent(this);
 
-        if (inst instanceof AllocInst) {
-            // --- 情況 1：這是一條 alloca 指令 ---
-            // * 必須 * 插入到入口塊的頂部（在所有非 alloca 之後）
-
-            // // 提示：
-            // // 1. 遍歷指令列表，找到第一個 *不是* AllocInst 的指令
+        // --- 情况 1：Phi 指令 (PhiInst) ---
+        // 必须严格位于基本块的最前端，甚至在 Alloc 之前（通常 Phi 和 Alloc 不会同时大量出现在非 Entry 块）
+        // 如果你的 IR 设计允许 Alloc 在 Phi 之后，这里的逻辑是：Phi 插在所有非 Phi 之前。
+        if (inst.getClass().getSimpleName().equals("PhiInst")) { // 使用类名判断，或者 inst instanceof PhiInst
             int index = 0;
+            // 跳过已经存在的 Phi 指令，插在它们后面，但要在普通指令前面
             for (Instruction i : this.instructions) {
-                if (!(i instanceof AllocInst)) {
+                if (!i.getClass().getSimpleName().equals("PhiInst")) {
                     break;
                 }
                 index++;
             }
-
-            // // 2. 在該位置插入 alloca
             this.instructions.add(index, inst);
-
-        } else {
-            // --- 情況 2：這是一條常規指令 (add, load, br, ret...) ---
-
-            if (this.instructions.isEmpty()) {
-                // a. 塊是空的，直接添加
-                this.instructions.add(inst);
-            } else {
-                // b. 塊不是空的，檢查最後一條指令
-                Instruction lastInst = this.instructions.getLast();
-
-                if (lastInst instanceof TerminatorInst) {
-                    if (inst instanceof TerminatorInst) {
-                        return; // (!!!)
-                    } else {
-                        // 插在终结者之前，保证基本块性质
-                        this.instructions.add(this.instructions.size() - 1, inst);
-                    }
-                } else {
-                    // d. 塊還沒有終結者，安全地添加到末尾
-                    this.instructions.add(inst);
-                }
-            }
+            return;
         }
 
-        // * 關鍵 *：無論在哪裡插入，都設置父指針
-        inst.setParent(this);
+        // --- 情况 2：Alloc 指令 (AllocInst) ---
+        // 必须位于函数入口块的顶部（但在 Phi 之后）
+        if (inst instanceof AllocInst) {
+            int index = 0;
+            for (Instruction i : this.instructions) {
+                // 跳过 Phi 和 其他 Alloc，插在它们后面
+                if (!i.getClass().getSimpleName().equals("PhiInst") && !(i instanceof AllocInst)) {
+                    break;
+                }
+                index++;
+            }
+            this.instructions.add(index, inst);
+            return;
+        }
+
+        // --- 情况 3：常规指令 & 终结者 ---
+
+        if (this.instructions.isEmpty()) {
+            this.instructions.add(inst);
+        } else {
+            Instruction lastInst = this.instructions.getLast();
+
+            // 如果最后一条已经是终结者 (br/ret)
+            if (lastInst instanceof TerminatorInst) {
+                if (inst instanceof TerminatorInst) {
+                    // 严重警告：试图向一个已有终结者的块添加另一个终结者
+                    // 之前的逻辑是直接 return，这会掩盖 Bug。
+                    // 正确的做法通常是：新的终结者应该替换旧的，或者这是逻辑错误。
+                    // 这里为了安全起见，先移除旧的，再加新的（或者保持旧逻辑但打印警告）
+
+                    // 建议方案：移除旧的，替换为新的（适应优化过程中的分支修改）
+                    lastInst.setParent(null);
+                    this.instructions.removeLast();
+                    this.instructions.add(inst);
+                } else {
+                    // 普通指令插在终结者之前
+                    this.instructions.add(this.instructions.size() - 1, inst);
+                }
+            } else {
+                // 块还没有终结者，直接追加
+                this.instructions.add(inst);
+            }
+        }
     }
 
     public Instruction getTerminator() {

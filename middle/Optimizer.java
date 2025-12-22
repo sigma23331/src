@@ -1,10 +1,7 @@
 package middle;
 
 import middle.component.model.Module;
-import optimize.BlockSimplify;
-import optimize.DeadCodeElimination;
-import optimize.Mem2Reg;
-import optimize.GVN;
+import optimize.*;
 // 导入你未来需要实现的优化 Pass 类
 // import optimize.analysis.*;
 // import optimize.transform.*;
@@ -72,7 +69,7 @@ public class Optimizer {
 
             // GCM (Global Code Motion): 全局代码移动
             // 把计算移动到控制流中尽可能“冷”的地方（比如移出循环）
-            // GCM.run(module);
+            GCM.run(module);
 
             // 常量传播与折叠 (Constant Propagation)
             // ConstProp.run(module);

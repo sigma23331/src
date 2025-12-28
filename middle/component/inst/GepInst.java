@@ -110,4 +110,22 @@ public class GepInst extends Instruction {
                 ptr.getName() +
                 indexStr;
     }
+
+    @Override
+    public Instruction copy() {
+        // 1. 提取所有索引 (从 operand 1 开始)
+        // Operand[0] 是 Base Pointer
+        // Operand[1...N] 是 Indices
+        ArrayList<Value> indexes = new ArrayList<>();
+        for (int i = 1; i < this.getNumOperands(); i++) {
+            indexes.add(this.getOperand(i));
+        }
+
+        // 2. 创建新副本
+        // 注意：这里传入的是旧的 pointer 和 indexes，
+        // 在内联的后续步骤中会通过 remapOperands 替换为新的值。
+        GepInst inst = new GepInst(this.getName(), this.getPointer(), indexes);
+        inst.setName(this.getName() + "_copy");
+        return inst;
+    }
 }

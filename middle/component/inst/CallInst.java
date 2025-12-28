@@ -87,4 +87,21 @@ public class CallInst extends Instruction {
             return this.getName() + " = " + call;
         }
     }
+
+    @Override
+    public Instruction copy() {
+        // 1. 提取当前指令的所有参数
+        // CallInst 的 Operand[0] 是函数本身，Operand[1...N] 是参数
+        // 我们利用 getNumArgs() 和 getArg(i) 辅助方法来提取
+        ArrayList<Value> args = new ArrayList<>();
+        for (int i = 0; i < this.getNumArgs(); i++) {
+            args.add(this.getArg(i));
+        }
+
+        // 2. 调用构造函数创建副本
+        // 注意：新指令的操作数最初指向旧的 Value，后续在内联过程中会通过 remapOperands 更新
+        CallInst inst = new CallInst(this.getName(), this.getFunction(), args);
+        inst.setName(this.getName() + "_copy");
+        return inst;
+    }
 }

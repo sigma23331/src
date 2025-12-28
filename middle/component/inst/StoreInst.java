@@ -45,4 +45,11 @@ public class StoreInst extends Instruction {
         return "store " + val.getType().toString() + " " + val.getName() + ", " +
                ptr.getType().toString() + " " + ptr.getName();
     }
+
+    @Override
+    public Instruction copy() {
+        StoreInst inst = new StoreInst(this.getValue(),this.getPointer());
+        inst.setName(this.getName() + "_copy");
+        return inst;
+    }
 }

@@ -37,4 +37,12 @@ public class ZextInst extends Instruction {
                 val.getType().toString() + " " + val.getName() +
                 " to " + this.getType().toString();
     }
+
+    @Override
+    public Instruction copy() {
+        ZextInst inst = new ZextInst(this.getName(),this.getValueToCast(),this.getType());
+        inst.setName(this.getName() + "_copy");
+        return inst;
+    }
+
 }

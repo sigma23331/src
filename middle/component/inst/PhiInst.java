@@ -136,4 +136,25 @@ public class PhiInst extends Instruction {
         }
         return this.getName() + " = phi " + this.getType().toString() + " " + incomingStr;
     }
+
+    @Override
+    public Instruction copy() {
+        // 1. 创建一个新的空 Phi 指令
+        // 我们使用第一个基础构造函数，保留原指令的名字（内联时通常会后续重命名）
+        PhiInst newPhi = new PhiInst(this.getName(), this.getType());
+
+        // 2. 遍历原指令的所有 [Value, BasicBlock] 对
+        for (int i = 0; i < this.getNumIncoming(); i++) {
+            Value val = this.getIncomingValue(i);
+            BasicBlock block = this.getIncomingBlock(i);
+
+            // 3. 将这些“旧”的操作数添加到新 Phi 中
+            // 注意：这里添加的 block 还是旧函数的 BasicBlock。
+            // 在 InlineFunction.performInline() 中，会调用 remapOperands()，
+            // 那时会自动利用 valueMap 将这些旧 block 替换为新拷贝的 block。
+            newPhi.addIncoming(val, block);
+        }
+        newPhi.setName(this.getName() + "_copy");
+        return newPhi;
+    }
 }

@@ -1090,6 +1090,47 @@ public class MipsBuilder {
     }
 
     private void buildCallInst(CallInst callInst) {
+        Function targetFunc = (Function) callInst.getOperand(0);
+        String funcName = targetFunc.getName();
+
+        // --- 【关键修改】拦截库函数调用 ---
+        if (funcName.equals("putstr") || funcName.equals("@putstr")) {
+            // 拦截！转为内联 Syscall，不再生成 jal
+            // CallInst 的第 1 个操作数是参数
+            buildPutstrCore(callInst.getOperand(1));
+            return;
+        }
+        if (funcName.equals("putint") || funcName.equals("@putint")) {
+            // 类似地处理 putint
+            // 假设你提取了 buildPutintCore
+            // buildPutintCore(callInst.getOperand(1));
+
+            // 简单写一下逻辑：
+            Value val = callInst.getOperand(1);
+            // ...加载 val 到 $a0 ...
+            if (val instanceof ConstInt) {
+                emit(new LiAsm(Register.A0, ((ConstInt) val).getValue()));
+            } else if (var2reg.containsKey(val)) {
+                emit(new MoveAsm(Register.A0, var2reg.get(val)));
+            } else {
+                emit(new MemAsm(AsmOp.LW, Register.A0, Register.SP, var2Offset.get(val)));
+            }
+            emit(new LiAsm(Register.V0, 1));
+            emit(new SyscallAsm());
+            return;
+        }
+        if (funcName.equals("getint") || funcName.equals("@getint")) {
+            // 处理 getint
+            emit(new LiAsm(Register.V0, 5));
+            emit(new SyscallAsm());
+            // 处理返回值...
+            Register targetReg = var2reg.getOrDefault(callInst, Register.K0);
+            emit(new MoveAsm(targetReg, Register.V0));
+            if (targetReg == Register.K0 && var2Offset.containsKey(callInst)) {
+                emit(new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(callInst)));
+            }
+            return;
+        }
         // 1. 【关键修复】确定需要保存的寄存器 (Caller-Saved)
         // 策略：保存所有 var2reg 中已分配且会被 callee 破坏的寄存器
         ArrayList<Register> savedRegs = new ArrayList<>();
@@ -1115,7 +1156,7 @@ public class MipsBuilder {
         emit(new MemAsm(AsmOp.SW, Register.RA, Register.SP, raOffset));
 
         // 4. 准备参数
-        Function targetFunc = (Function) callInst.getOperand(0);
+        // Function targetFunc = (Function) callInst.getOperand(0);
         int argCount = callInst.getNumOperands() - 1;
 
         for (int i = 0; i < argCount; i++) {
@@ -1281,6 +1322,46 @@ public class MipsBuilder {
             // 目标在栈上: sw $v0, offset($sp)
             emit(new MemAsm(AsmOp.SW, Register.V0, Register.SP, var2Offset.get(inst)));
         }
+    }
+
+    // 提取出的通用 Putstr 生成逻辑
+    // 参数 argValue 就是要输出的那个字符串地址（可能是 GEP，可能是 GlobalVar）
+    private void buildPutstrCore(Value argValue) {
+        // 1. GEP 透视优化 (上一轮提到的修复)
+        if (argValue instanceof GepInst) {
+            Value ptr = ((GepInst) argValue).getPointer();
+            if (ptr instanceof ConstString) {
+                argValue = ptr;
+            }
+        }
+
+        // 2. 加载地址到 $a0
+        if (argValue instanceof ConstString) {
+            // 字符串常量优化
+            String labelName = parseLabel(argValue.getName());
+            emit(new LaAsm(Register.A0, labelName));
+        } else {
+            // 普通指针变量
+            if (var2reg.containsKey(argValue)) {
+                emit(new MoveAsm(Register.A0, var2reg.get(argValue)));
+            } else {
+                Integer offset = var2Offset.get(argValue);
+                if (offset == null) {
+                    // 容错处理：如果是指针是指向全局变量的
+                    if(argValue instanceof GlobalVar) {
+                        emit(new LaAsm(Register.A0, parseLabel(argValue.getName())));
+                    } else {
+                        throw new RuntimeException("Putstr Error: Arg not found. " + argValue);
+                    }
+                } else {
+                    emit(new MemAsm(AsmOp.LW, Register.A0, Register.SP, offset));
+                }
+            }
+        }
+
+        // 3. Syscall
+        emit(new LiAsm(Register.V0, 4));
+        emit(new SyscallAsm());
     }
 
     private void buildPutintInst(PutintInst inst) {

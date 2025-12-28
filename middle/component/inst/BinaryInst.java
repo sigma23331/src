@@ -45,4 +45,13 @@ public class BinaryInst extends Instruction {
                this.getOp1().getName() + ", " +
                this.getOp2().getName(); // (i1 类型不需要打印类型)
     }
+
+    @Override
+    public Instruction copy() {
+        BinaryInst inst = new BinaryInst(this.getOpCode(),this.getOp1(),this.getOp2());
+        inst.setName(this.getName() + "_copy");
+        return inst;
+    }
+
+
 }

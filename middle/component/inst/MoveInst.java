@@ -59,4 +59,11 @@ public class MoveInst extends Instruction {
 
         return "move " + toStr + ", " + fromStr;
     }
+
+    @Override
+    public Instruction copy() {
+        MoveInst inst = new MoveInst(this.getToValue(),this.getFromValue());
+        inst.setName(this.getName() + "_copy");
+        return inst;
+    }
 }

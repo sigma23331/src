@@ -44,4 +44,17 @@ public class RetInst extends TerminatorInst {
             return "ret " + retVal.getType().toString() + " " + retVal.getName();
         }
     }
+
+    @Override
+    public Instruction copy() {
+        if (this.isVoidRet()) {
+            // 情况 1: ret void
+            return new RetInst();
+        } else {
+            // 情况 2: ret <ty> <value>
+            // 获取旧的操作数，传入构造函数。
+            // 稍后 InlineFunction 会调用 remapOperands 将其替换为新值。
+            return new RetInst(this.getReturnValue());
+        }
+    }
 }

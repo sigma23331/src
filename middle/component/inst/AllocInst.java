@@ -42,4 +42,11 @@ public class AllocInst extends Instruction {
         //    例如: "%a_addr = alloca i32"
         return this.getName() + " = alloca " + this.allocatedType.toString();
     }
+
+    @Override
+    public Instruction copy() {
+        AllocInst inst = new AllocInst(this.getName(),this.getAllocatedType());
+        inst.setName(this.getName() + "_copy");
+        return inst;
+    }
 }

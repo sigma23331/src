@@ -40,4 +40,11 @@ public class LoadInst extends Instruction {
         return this.getName() + " = load " + this.getType().toString() + ", " +
                ptr.getType().toString() + " " + ptr.getName();
     }
+
+    @Override
+    public Instruction copy() {
+        LoadInst inst = new LoadInst(this.getName(),this.getPointer());
+        inst.setName(this.getName() + "_copy");
+        return inst;
+    }
 }

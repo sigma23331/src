@@ -4,34 +4,26 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="90fa020b-2e1d-46d4-9e79-4a11ccd6df54" name="更改" comment="optimization_1_pass">
-      <change afterPath="$PROJECT_DIR$/optimize/GCM.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/_2025_12_1_21_40_.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/在进行更新之前于_2025_12_1_21_40_取消提交了更改/shelved.patch" beforeDir="false" />
+    <list default="true" id="90fa020b-2e1d-46d4-9e79-4a11ccd6df54" name="更改" comment="optimization_gcm_pass">
+      <change afterPath="$PROJECT_DIR$/optimize/InlineFunction.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/MipsBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/MipsBuilder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/llvm_ir.txt" beforeDir="false" afterPath="$PROJECT_DIR$/llvm_ir.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/Optimizer.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/Optimizer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/AllocInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/AllocInst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/BinaryInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/BinaryInst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/BrInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/BrInst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/CallInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/CallInst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/GepInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/GepInst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/Instruction.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/Instruction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/LoadInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/LoadInst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/MoveInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/MoveInst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/PhiInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/PhiInst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/RetInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/RetInst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/StoreInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/StoreInst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/TruncInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/TruncInst.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middle/component/inst/ZextInst.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/inst/ZextInst.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/middle/component/model/BasicBlock.java" beforeDir="false" afterPath="$PROJECT_DIR$/middle/component/model/BasicBlock.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mips.txt" beforeDir="false" afterPath="$PROJECT_DIR$/mips.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/optimize/GVN.java" beforeDir="false" afterPath="$PROJECT_DIR$/optimize/GVN.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/optimize/RemovePhi.java" beforeDir="false" afterPath="$PROJECT_DIR$/optimize/RemovePhi.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/.idea/shelf/_2025_12_1_21_40_.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/.idea/shelf/在进行更新之前于_2025_12_1_21_40_取消提交了更改/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/backend/MipsBuilder$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/backend/MipsBuilder$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/backend/MipsBuilder$MagicData.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/backend/MipsBuilder$MagicData.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/backend/MipsBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/backend/MipsBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/llvm_ir.txt" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/llvm_ir.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/middle/component/model/BasicBlock.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/middle/component/model/BasicBlock.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/mips.txt" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/mips.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/optimize/GVN$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/optimize/GVN$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/optimize/GVN.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/optimize/GVN.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/optimize/RemovePhi.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/optimize/RemovePhi.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Compiler/src.zip" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/src.zip" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/symbol.txt" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/symbol.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/Compiler/testfile.txt" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/testfile.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Compiler/归档.zip" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Compiler/归档.zip" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/symbol.txt" beforeDir="false" afterPath="$PROJECT_DIR$/symbol.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/testfile.txt" beforeDir="false" afterPath="$PROJECT_DIR$/testfile.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/归档.zip" beforeDir="false" afterPath="$PROJECT_DIR$/归档.zip" afterDir="false" />
     </list>
@@ -172,7 +164,15 @@
       <option name="project" value="LOCAL" />
       <updated>1764769802285</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="optimization_gcm_pass">
+      <option name="closed" value="true" />
+      <created>1766372949609</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1766372949609</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -197,6 +197,7 @@
     <MESSAGE value="objectCodeGeneration_test_5" />
     <MESSAGE value="objectCodeGeneration_test_6" />
     <MESSAGE value="optimization_2_pass" />
-    <option name="LAST_COMMIT_MESSAGE" value="optimization_2_pass" />
+    <MESSAGE value="optimization_gcm_pass" />
+    <option name="LAST_COMMIT_MESSAGE" value="optimization_gcm_pass" />
   </component>
 </project>

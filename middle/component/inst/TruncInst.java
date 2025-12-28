@@ -38,4 +38,11 @@ public class TruncInst extends Instruction {
                val.getType().toString() + " " + val.getName() +
                " to " + this.getType().toString();
     }
+
+    @Override
+    public Instruction copy() {
+        TruncInst inst = new TruncInst(this.getName(),this.getValueToCast(),this.getType());
+        inst.setName(this.getName() + "_copy");
+        return inst;
+    }
 }

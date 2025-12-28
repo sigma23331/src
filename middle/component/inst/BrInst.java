@@ -53,4 +53,27 @@ public class BrInst extends TerminatorInst {
             return "br label %" + this.getTrueDest().getName();
         }
     }
+
+    @Override
+    public Instruction copy() {
+        if (this.isConditional()) {
+            // 条件跳转：对应构造函数 BrInst(Value cond, BasicBlock ifTrue, BasicBlock ifFalse)
+            // Operand[0] = cond
+            // Operand[1] = trueDest
+            // Operand[2] = falseDest
+            BrInst inst = new BrInst(
+                    this.getOperand(0),
+                    (BasicBlock) this.getOperand(1),
+                    (BasicBlock) this.getOperand(2)
+            );
+            inst.setName(this.getName() + "_copy");
+            return inst;
+        } else {
+            // 无条件跳转：对应构造函数 BrInst(BasicBlock dest)
+            // Operand[0] = dest
+            BrInst inst = new BrInst((BasicBlock) this.getOperand(0));
+            inst.setName(this.getName() + "_copy");
+            return inst;
+        }
+    }
 }

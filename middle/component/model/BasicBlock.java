@@ -255,4 +255,19 @@ public class BasicBlock extends Value {
         // // (如果指令为空，可能需要一个占位符，例如一个 ret)
         return this.getName() + ":\n" + instStr;
     }
+
+    /**
+     * 克隆 BasicBlock 的外壳。
+     * 注意：这不会克隆指令，指令的克隆和填充需要在 InlineFunction Pass 中
+     * 配合 Instruction.copy() 和 valueMap 一起完成。
+     *
+     * @param newParent 该块所属的新函数（如果是内联，就是 Caller）
+     * @return 新的空 BasicBlock
+     */
+    public BasicBlock cloneTo(Function newParent) {
+        // 创建新块，名字为了调试方便可以加后缀，或者让 BasicBlock 构造函数自动重命名
+        BasicBlock newBlock = new BasicBlock(this.getName() + "_inline", newParent);
+        newBlock.setLoopDepth(this.loopDepth); // 复制一些基础属性
+        return newBlock;
+    }
 }

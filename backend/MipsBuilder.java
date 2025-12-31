@@ -1093,21 +1093,15 @@ public class MipsBuilder {
         Function targetFunc = (Function) callInst.getOperand(0);
         String funcName = targetFunc.getName();
 
-        // --- 【关键修改】拦截库函数调用 ---
+        // =========================================================
+        // 0. 库函数拦截 (保持你原有的高效逻辑)
+        // =========================================================
         if (funcName.equals("putstr") || funcName.equals("@putstr")) {
-            // 拦截！转为内联 Syscall，不再生成 jal
-            // CallInst 的第 1 个操作数是参数
-            buildPutstrCore(callInst.getOperand(1));
+            buildPutstrCore(callInst.getOperand(1)); // 假设你提取了这个 helper
             return;
         }
         if (funcName.equals("putint") || funcName.equals("@putint")) {
-            // 类似地处理 putint
-            // 假设你提取了 buildPutintCore
-            // buildPutintCore(callInst.getOperand(1));
-
-            // 简单写一下逻辑：
             Value val = callInst.getOperand(1);
-            // ...加载 val 到 $a0 ...
             if (val instanceof ConstInt) {
                 emit(new LiAsm(Register.A0, ((ConstInt) val).getValue()));
             } else if (var2reg.containsKey(val)) {
@@ -1120,10 +1114,8 @@ public class MipsBuilder {
             return;
         }
         if (funcName.equals("getint") || funcName.equals("@getint")) {
-            // 处理 getint
             emit(new LiAsm(Register.V0, 5));
             emit(new SyscallAsm());
-            // 处理返回值...
             Register targetReg = var2reg.getOrDefault(callInst, Register.K0);
             emit(new MoveAsm(targetReg, Register.V0));
             if (targetReg == Register.K0 && var2Offset.containsKey(callInst)) {
@@ -1131,39 +1123,60 @@ public class MipsBuilder {
             }
             return;
         }
-        // 1. 【关键修复】确定需要保存的寄存器 (Caller-Saved)
-        // 策略：保存所有 var2reg 中已分配且会被 callee 破坏的寄存器
+
+        // =========================================================
+        // 1. 【关键修改】确定需要保存的寄存器 (Caller-Saved Optimization)
+        // =========================================================
+        Set<Register> activeRegs = callInst.getActiveReg(); // 从指令中获取分析结果
         ArrayList<Register> savedRegs = new ArrayList<>();
-        for (Register reg : var2reg.values()) {
-            // 排除特殊寄存器，保存通用寄存器 (T0-T9, A0-A3, V0-V1 等)
-            if (reg != Register.SP && reg != Register.RA && reg != Register.ZERO
-                    && reg != Register.K0 && reg != Register.K1 && reg != Register.GP) {
-                if (!savedRegs.contains(reg)) {
+
+        if (activeRegs != null && !activeRegs.isEmpty()) {
+            // 【优化路径】：只保存 RegAlloc 认为活跃的寄存器
+            for (Register reg : activeRegs) {
+                if (isValidGeneralReg(reg)) {
                     savedRegs.add(reg);
+                }
+            }
+        } else {
+            // 【兜底路径】：如果 activeRegs 为空 (可能是没开优化，或者分析失败)
+            // 回退到保守策略：保存所有 var2reg 中已分配的寄存器
+            for (Register reg : var2reg.values()) {
+                if (isValidGeneralReg(reg)) {
+                    if (!savedRegs.contains(reg)) {
+                        savedRegs.add(reg);
+                    }
                 }
             }
         }
 
-        // 2. 保存这些寄存器到栈上
+        // 必须排序！保证压栈和出栈顺序的一致性 (避免随机性 Bug)
+        Collections.sort(savedRegs);
+
+        // =========================================================
+        // 2. 执行压栈 (Save Context)
+        // =========================================================
         for (Register reg : savedRegs) {
             curStackOffset -= 4;
             emit(new MemAsm(AsmOp.SW, reg, Register.SP, curStackOffset));
         }
 
+        // =========================================================
         // 3. 保存 $ra
+        // =========================================================
         curStackOffset -= 4;
         int raOffset = curStackOffset;
         emit(new MemAsm(AsmOp.SW, Register.RA, Register.SP, raOffset));
 
-        // 4. 准备参数
-        // Function targetFunc = (Function) callInst.getOperand(0);
+        // =========================================================
+        // 4. 准备参数 (保持原有逻辑)
+        // =========================================================
         int argCount = callInst.getNumOperands() - 1;
 
         for (int i = 0; i < argCount; i++) {
             Value arg = callInst.getOperand(i + 1);
 
             if (i < 4) {
-                // 前 4 个参数 -> 寄存器
+                // 前 4 个参数 -> 寄存器 $a0-$a3
                 Register argReg = Register.getByOffset(Register.A0, i);
                 if (arg instanceof ConstInt) {
                     emit(new LiAsm(argReg, ((ConstInt) arg).getValue()));
@@ -1188,40 +1201,61 @@ public class MipsBuilder {
             }
         }
 
+        // =========================================================
         // 5. 调整栈指针 ($sp) 并跳转
+        // =========================================================
         int extraArgs = Math.max(0, argCount - 4);
         int stackSpaceForArgs = extraArgs * 4;
 
         // SP 下降：覆盖当前栈帧 + 保存的寄存器 + RA + 栈参数
-        // 注意：curStackOffset 此时已经包含了 savedRegs 和 RA
         emit(new CalcAsm(Register.SP, AsmOp.ADDIU, Register.SP, curStackOffset - stackSpaceForArgs));
 
+        // 跳转 (记得处理符号)
         emit(new JumpAsm(AsmOp.JAL, parseLabel(targetFunc.getName())));
 
+        // =========================================================
         // 6. 恢复 SP
+        // =========================================================
         emit(new CalcAsm(Register.SP, AsmOp.ADDIU, Register.SP, -(curStackOffset - stackSpaceForArgs)));
 
+        // =========================================================
         // 7. 恢复 $ra
+        // =========================================================
         emit(new MemAsm(AsmOp.LW, Register.RA, Register.SP, raOffset));
         curStackOffset += 4; // 逻辑弹栈 RA
 
-        // 8. 【关键修复】恢复 Caller-Saved 寄存器 (倒序)
-        // 注意偏移量的计算
+        // =========================================================
+        // 8. 恢复 Caller-Saved 寄存器 (倒序)
+        // =========================================================
+        // 这里的 tempOffset 逻辑是你原有的，它是对的。
+        // 压栈顺序：RegA(High) -> RegB(Low) -> RA
+        // 此时 curStackOffset 在 RA 上方，也就是 RegB 的位置
+        // 你的逻辑是：从 RA 的位置 (raOffset) 往回找
         int tempOffset = raOffset;
         for (int i = savedRegs.size() - 1; i >= 0; i--) {
-            tempOffset += 4; // 往回找上一个存的位置
+            tempOffset += 4; // 往回找上一个存的位置 (即 RegB, 然后 RegA)
             emit(new MemAsm(AsmOp.LW, savedRegs.get(i), Register.SP, tempOffset));
         }
         curStackOffset += (savedRegs.size() * 4); // 逻辑弹栈 Regs
 
-        // 9. 处理返回值
+        // =========================================================
+        // 9. 处理返回值 (保持原有逻辑)
+        // =========================================================
         if (!(callInst.getType() instanceof VoidType)) {
             Register targetReg = var2reg.getOrDefault(callInst, Register.K0);
             emit(new MoveAsm(targetReg, Register.V0));
-            if (targetReg == Register.K0) {
+            if (targetReg == Register.K0 && var2Offset.containsKey(callInst)) {
                 emit(new MemAsm(AsmOp.SW, targetReg, Register.SP, var2Offset.get(callInst)));
             }
         }
+    }
+
+    /**
+     * 辅助方法：判断是否是需要保存的通用寄存器
+     */
+    private boolean isValidGeneralReg(Register reg) {
+        return reg != Register.SP && reg != Register.RA && reg != Register.ZERO
+                && reg != Register.K0 && reg != Register.K1 && reg != Register.GP;
     }
 
     // 辅助方法：递归计算类型的大小 (字节)

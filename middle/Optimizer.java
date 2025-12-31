@@ -42,7 +42,7 @@ public class Optimizer {
         // ==========================================
 
         boolean changed = true;
-        int maxIterations = 5; // 通常 5-10 次足够收敛
+        int maxIterations = 10; // 通常 5-10 次足够收敛
 
         for (int i = 0; i < maxIterations && changed; i++) {
             changed = false;

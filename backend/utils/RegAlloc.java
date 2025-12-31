@@ -227,20 +227,16 @@ public class RegAlloc {
         nodeCache = new HashMap<>();
 
         for (BasicBlock bb : f.getBasicBlocks()) {
-            // live 集合初始化为 OUT[B]
             Set<Value> currentLive = new HashSet<>(liveOut.get(bb));
             List<Instruction> insts = bb.getInstructions();
 
-            // 逆序遍历指令
             for (int i = insts.size() - 1; i >= 0; i--) {
                 Instruction inst = insts.get(i);
 
-                // 如果指令定义了一个变量
-                if (!inst.getName().isEmpty() && !(inst instanceof ZextInst)) {
-                    // 定义点会让变量不再活跃 (对于前驱而言)
+                // 【修改】去掉了 !(inst instanceof ZextInst)
+                // 允许 Zext 参与干涉图构建
+                if (!inst.getName().isEmpty()) {
                     currentLive.remove(inst);
-
-                    // 该变量与当前所有活跃变量干涉
                     Node defNode = getNode(inst);
                     for (Value liveVar : currentLive) {
                         Node liveNode = getNode(liveVar);
@@ -248,8 +244,7 @@ public class RegAlloc {
                     }
                 }
 
-                // 指令使用的变量变更为活跃
-                for (int k = 0;k < inst.getNumOperands();k++) {
+                for (int k = 0; k < inst.getNumOperands(); k++) {
                     Value op = inst.getOperand(k);
                     if (canAllocate(op)) {
                         currentLive.add(op);

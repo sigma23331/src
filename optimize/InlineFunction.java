@@ -10,9 +10,9 @@ import java.util.*;
 public class InlineFunction {
 
     // 最大内联深度/轮数，防止无限循环
-    private static final int MAX_PASSES = 10;
+    private static final int MAX_PASSES = 3;
     // 最大指令数阈值，超过这个大小的函数不内联 (防止代码膨胀)
-    private static final int MAX_INST_COUNT = 300;
+    private static final int MAX_INST_COUNT = 70;
     private static int inlineUniqueId = 0;
 
     public static void run(Module module) {
